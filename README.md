@@ -2,5 +2,5 @@
 
 <div align="center">
   <img src="https://img.shields.io/github/commit-activity/t/SlyPex/graph-gym-hpa" alt="GitHub commit activity">
-  <img src="https://img.shields.io/github/contributors/SlyPex/graph-gym-hpa" alt="Contributers">
+  <img src="https://img.shields.io/github/contributors/SlyPex/graph-gym-hpa" alt="Contributors">
 </div>
