@@ -1,0 +1,54 @@
+name: Continuous Integration
+
+on:
+    pull_request:
+        branches:
+            - main
+
+jobs:
+  branch:
+    name: Get Branch Name
+    runs-on: ubuntu-latest
+    outputs:
+      branch_name: ${{ steps.vars.outputs.branch_name }}
+    steps:
+      - name: Save Branch Name
+        id: vars
+        run: |
+          echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+          echo "branch_name=${{ github.head_ref }}"
+  ruff:
+    name: Run Ruff on the project
+    needs: branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.branch.outputs.branch_name }}
+          fetch-depth: 1
+
+      - name: Set up Git config
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Install Ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "--version"
+        
+      - name: Ruff Linter
+        run: ruff check --fix
+      - name: Ruff Formatter
+        run: ruff format
+
+      - name: Commit and push changes
+        run: |
+          git add .
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: lint/format code via CI"
+            git push origin ${{ needs.branch.outputs.branch_name }}
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    

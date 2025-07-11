@@ -28,8 +28,12 @@ def test_model(model, env, n_episodes, n_steps, smoothing_window, fig_name):
 
     # Plot the episode reward over time
     plt.figure()
-    rewards_smoothed = pd.Series(episode_rewards).rolling(smoothing_window, min_periods=smoothing_window).mean()
+    rewards_smoothed = (
+        pd.Series(episode_rewards)
+        .rolling(smoothing_window, min_periods=smoothing_window)
+        .mean()
+    )
     plt.plot(rewards_smoothed)
     plt.xlabel("Episode")
     plt.ylabel("Reward")
-    plt.savefig(fig_name, dpi=250, bbox_inches='tight')
+    plt.savefig(fig_name, dpi=250, bbox_inches="tight")
