@@ -37,6 +37,8 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ruff-deps-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ruff-deps-${{ runner.os }}-
       - name: Run lint
         run: ruff check --fix
 
