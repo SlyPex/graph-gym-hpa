@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Save Branch Name
         id: vars
-        run: echo "branch_name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+        run: echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
   lint:
     needs: branch
     runs-on: ubuntu-latest
