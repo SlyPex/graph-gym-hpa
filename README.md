@@ -3,4 +3,5 @@
 <div align="center">
   <img src="https://img.shields.io/github/commit-activity/t/SlyPex/graph-gym-hpa" alt="GitHub commit activity">
   <img src="https://img.shields.io/github/contributors/SlyPex/graph-gym-hpa" alt="Contributors">
+  ![Actions Status](https://github.com/SlyPex/graph-gym-hpa/actions/workflows/ci.yaml/badge.svg)
 </div>
