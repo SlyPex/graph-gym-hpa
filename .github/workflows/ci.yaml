@@ -6,51 +6,28 @@ on:
             - main
 
 jobs:
-  setup:
-    name: Prepare Environment
-    runs-on: ubuntu-latest
-
-    steps:
-        - name: Checkout Code 
-          uses: actions/checkout@v4.2.2
-          with:
-            fetch-depth: 0
-        - name: Install ruff
-          uses: astral-sh/ruff-action@v3
-          with:
-            args: "--version"
-
-        - name: Cache Ruff Environment
-          uses: actions/cache@v4
-          with:
-            path: ~/.cache/pip
-            key: ruff-deps-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
-            restore-keys: |
-              ruff-deps-${{ runner.os }}-
   lint:
-    needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Retrieve cache
-        uses: actions/cache@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Install Ruff
+        uses: astral-sh/ruff-action@v3
         with:
-          path: ~/.cache/pip
-          key: ruff-deps-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ruff-deps-${{ runner.os }}-
-      - name: Run lint
+          args: "--version"
+        
+      - name: Ruff Linter
         run: ruff check --fix
 
   format:
-    needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Retrieve cache
-        uses: actions/cache@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Install Ruff
+        uses: astral-sh/ruff-action@v3
         with:
-          path: ~/.cache/pip
-          key: ruff-deps-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
-      - name: Run lint
+          args: "--version"
+
+      - name: Ruff Formatter
         run: ruff format
