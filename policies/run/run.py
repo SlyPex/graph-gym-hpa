@@ -1,7 +1,6 @@
 import logging
 import argparse
 
-from setuptools.command.alias import alias
 from stable_baselines3 import PPO
 from stable_baselines3 import A2C
 from sb3_contrib import RecurrentPPO
