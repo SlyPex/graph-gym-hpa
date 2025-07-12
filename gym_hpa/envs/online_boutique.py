@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from gymnasium import spaces
 from gymnasium.utils import seeding
+from gnn.graph_builder import build_graph, graph_to_data , print_a
 
 # Number of Requests - Discrete Event
 from gym_hpa.envs.deployment import get_max_cpu, get_max_mem, get_max_traffic, get_online_boutique_deployment_list
