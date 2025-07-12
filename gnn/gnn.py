@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATv2Conv
@@ -21,7 +20,7 @@ class Gnn(nn.Module):
         x = pyg_data.x
         edge_index = pyg_data.edge_index
         edge_attr = pyg_data.edge_attr
-        x = F.relu(self.conv1(x,edge_index, edge_attr))
+        x = F.relu(self.conv1(x, edge_index, edge_attr))
         x = self.conv2(x, edge_index, edge_attr)
         obs = x.flatten()
         return obs
