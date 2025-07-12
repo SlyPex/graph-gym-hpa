@@ -20,7 +20,7 @@ class Gnn(nn.Module):
         pyg_data = data
         x = pyg_data.x
         edge_index = pyg_data.edge_index
-        edge_attr =  pyg_data.edge_attr
+        edge_attr = pyg_data.edge_attr
         x = F.relu(self.conv1(x,edge_index, edge_attr))
         x = self.conv2(x, edge_index, edge_attr)
         obs = x.flatten()
