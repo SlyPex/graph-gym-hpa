@@ -18,10 +18,10 @@ class Gnn(nn.Module):
 
     def forward(self, data):
         pyg_data = data
-        x = torch.stack([feat for feat in pyg_data.x], dim=0)
+        x = pyg_data.x
         edge_index = pyg_data.edge_index
-        edge_attr = torch.stack([feat for feat in pyg_data.edge_attr], dim=0)
-        x = F.relu(self.conv1(x, edge_index, edge_attr))
+        edge_attr =  pyg_data.edge_attr
+        x = F.relu(self.conv1(x,edge_index, edge_attr))
         x = self.conv2(x, edge_index, edge_attr)
         obs = x.flatten()
         return obs
