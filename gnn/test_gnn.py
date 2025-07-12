@@ -3,6 +3,7 @@ import torch
 from gnn import Gnn
 from torch_geometric.utils import from_networkx
 
+
 def test_gnn_module():
     """
     Tests the GNN module by creating a sample graph,
@@ -14,7 +15,7 @@ def test_gnn_module():
     # These must match the attributes you add to your graph nodes and edges.
     node_feature_keys = ["cpu_usage", "mem_usage", "num_pods"]
     edge_feature_keys = ["traffic"]
-    
+
     # 2. Create a sample microservice dependency graph using networkx.
     G = nx.DiGraph()
 
@@ -25,15 +26,15 @@ def test_gnn_module():
 
     # Add edges (representing service-to-service calls) with their features.
     G.add_edge(0, 1, traffic=150.5)  # Frontend calls Backend
-    G.add_edge(1, 2, traffic=90.0)   # Backend calls Database
-    G.add_edge(1, 0, traffic=10.0)   # Health check from Backend to Frontend
+    G.add_edge(1, 2, traffic=90.0)  # Backend calls Database
+    G.add_edge(1, 0, traffic=10.0)  # Health check from Backend to Frontend
 
-    print(f"Created a sample graph with {G.number_of_nodes()} nodes and {G.number_of_edges()} edges.")
-    
+    print(
+        f"Created a sample graph with {G.number_of_nodes()} nodes and {G.number_of_edges()} edges."
+    )
+
     graph_data = from_networkx(
-	G=G,
-	group_node_attrs=node_feature_keys,
-	group_edge_attrs=edge_feature_keys
+        G=G, group_node_attrs=node_feature_keys, group_edge_attrs=edge_feature_keys
     )
 
     # 3. Instantiate the GNN model.
@@ -42,7 +43,7 @@ def test_gnn_module():
         node_feature_keys=node_feature_keys,
         edge_feature_keys=edge_feature_keys,
         hidden_dim=32,
-        out_dim=16  # Each node will have an 8-dimensional embedding
+        out_dim=16,  # Each node will have an 8-dimensional embedding
     )
     print("GNN model instantiated successfully.")
 
@@ -59,6 +60,7 @@ def test_gnn_module():
     print("Final observation embedding vector:")
     print(observation_embedding)
     print("\nTest finished successfully!")
+
 
 if __name__ == "__main__":
     test_gnn_module()
