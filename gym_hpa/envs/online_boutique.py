@@ -16,6 +16,12 @@ from gym_hpa.envs.deployment import get_max_cpu, get_max_mem, get_max_traffic, g
 from gym_hpa.envs.util import save_to_csv, get_num_pods, get_cost_reward, \
     get_latency_reward_online_boutique
 
+
+##graph creation
+from gnn.graphCreation import build_graph_with_sim_traffic
+from gnn.graphCreation import graph_to_data
+
+
 # MIN and MAX Replication
 MIN_REPLICATION = 1
 MAX_REPLICATION = 8
@@ -243,7 +249,7 @@ class OnlineBoutique(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def reset(self):
+    def reset(self ,* , seed = None , options = None):
         """
         Reset the state of the environment and returns an initial observation.
         Returns
@@ -419,6 +425,11 @@ class OnlineBoutique(gym.Env):
                 self.deploymentList[ID_email].received_traffic, self.deploymentList[ID_email].transmit_traffic,
             )
 
+        graph = build_graph_with_sim_traffic(ob)
+        data = graph_to_data(graph)
+        print(data)
+        exit()
+        
         return ob
 
     def get_observation_space(self):
