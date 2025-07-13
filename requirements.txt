@@ -68,3 +68,4 @@ tzdata==2025.2
 urllib3==2.5.0
 websocket-client==1.8.0
 yarl==1.20.1
+tensorboard==2.19.0
