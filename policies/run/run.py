@@ -111,7 +111,7 @@ def get_env(use_case, k8s, goal):
 
 
 def main():
-    print("main")
+    print('main')
     # Import and initialize Environment
     logging.info(args)
 
@@ -136,6 +136,7 @@ def main():
         scenario = "real"
     else:
         print("sim")
+        print("sim")
         scenario = "simulated"
 
     tensorboard_log = "../../results/" + use_case + "/" + scenario + "/" + goal + "/"
@@ -158,8 +159,8 @@ def main():
     )
 
     if training:
-        print("tr")
-
+        print('tr')
+        
         if loading:  # resume training
             model = get_load_model(alg, tensorboard_log, load_path)
             model.set_env(env)
