@@ -47,7 +47,7 @@ jobs:
         run: ruff check --fix
 
       - name: Commit and push changes
-        if: always()
+        if: success() || failure()
         run: |
           git add .
           if ! git diff --cached --quiet; then
