@@ -11,13 +11,13 @@ from gymnasium import spaces
 from gymnasium.utils import seeding
 
 # Number of Requests - Discrete Event
-from gym_hpa.rl_envirenments.deployment import (
+from gym_hpa.rl_environments.deployment import (
     get_max_cpu,
     get_max_mem,
     get_max_traffic,
     get_online_boutique_deployment_list,
 )
-from gym_hpa.rl_envirenments.util import (
+from gym_hpa.rl_environments.util import (
     save_to_csv,
     get_num_pods,
     get_cost_reward,
