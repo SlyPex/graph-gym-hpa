@@ -1,5 +1,4 @@
 import csv
-import datetime
 import logging
 import time
 from statistics import mean
