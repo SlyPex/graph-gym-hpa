@@ -10,13 +10,13 @@ from gymnasium import spaces
 from gymnasium.utils import seeding
 from datetime import datetime
 
-from gym_hpa.envs.deployment import (
+from gym_hpa.rl_envirenments.deployment import (
     get_max_cpu,
     get_max_mem,
     get_max_traffic,
     get_redis_deployment_list,
 )
-from gym_hpa.envs.util import (
+from gym_hpa.rl_envirenments.util import (
     save_to_csv,
     get_cost_reward,
     get_latency_reward_redis,
