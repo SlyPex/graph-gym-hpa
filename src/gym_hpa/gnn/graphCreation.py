@@ -102,7 +102,7 @@ def build_graph(
                     traffic_metrics[
                         (traffic_metrics["source"] == i)
                         & (traffic_metrics["destination"] == j)
-                    ]["traffic"]
+                    ]["traffic"].iloc[0]
                 )
                 # print(traffic)
                 edges.append({"source": i, "target": j, "traffic": traffic})
