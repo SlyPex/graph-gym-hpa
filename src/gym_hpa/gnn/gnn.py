@@ -70,7 +70,7 @@ class CustomGNNExtractor(BaseFeaturesExtractor):
 
         # Reshape edge features (ignored in this GCN, but available if needed later)
         # edge_feats = observations[
-            # node_feat_size : node_feat_size + edge_feat_size
+        # node_feat_size : node_feat_size + edge_feat_size
         # ].reshape(self.num_edges, self.edge_feature_dim)
 
         # Run GCN layers
