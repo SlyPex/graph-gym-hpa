@@ -1,6 +1,6 @@
 import logging
 import argparse
-
+import os
 from stable_baselines3 import PPO
 from stable_baselines3 import A2C
 from sb3_contrib import RecurrentPPO
@@ -10,6 +10,10 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 
 # Logging
 from policies.util.util import test_model
+
+
+from gym_hpa.paths import RESULTS_DIR
+
 
 logging.basicConfig(filename="run.log", filemode="w", level=logging.INFO)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
@@ -52,9 +56,15 @@ args = parser.parse_args()
 
 def get_model(alg, env, tensorboard_log):
     model = 0
+    ## the batch size was fixed at 125 to clean the output , must update later
     if alg == "ppo":
         model = PPO(
-            "MlpPolicy", env, verbose=1, tensorboard_log=tensorboard_log, n_steps=500
+            "MlpPolicy",
+            env,
+            verbose=1,
+            tensorboard_log=tensorboard_log,
+            n_steps=500,
+            batch_size=125,
         )
     elif alg == "recurrent_ppo":
         model = RecurrentPPO(
@@ -111,7 +121,6 @@ def get_env(use_case, k8s, goal):
 
 
 def main():
-    print("main")
     # Import and initialize Environment
     logging.info(args)
 
@@ -135,10 +144,9 @@ def main():
     if k8s:
         scenario = "real"
     else:
-        print("sim")
         scenario = "simulated"
 
-    tensorboard_log = "../../results/" + use_case + "/" + scenario + "/" + goal + "/"
+    tensorboard_log = os.path.join(RESULTS_DIR, use_case, scenario, goal)
 
     name = (
         alg
@@ -158,8 +166,6 @@ def main():
     )
 
     if training:
-        print("tr")
-
         if loading:  # resume training
             model = get_load_model(alg, tensorboard_log, load_path)
             model.set_env(env)
