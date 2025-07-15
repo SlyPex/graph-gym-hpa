@@ -12,6 +12,8 @@ jobs:
   branch:
     name: Get Branch Name
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       branch_name: ${{ steps.vars.outputs.branch_name }}
     steps:
@@ -24,6 +26,8 @@ jobs:
     name: Run Ruff on the project
     needs: branch
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
