@@ -13,9 +13,6 @@ from policies.util.util import test_model
 
 
 from gym_hpa.paths import RESULTS_DIR
-import os
-
-
 
 
 logging.basicConfig(filename="run.log", filemode="w", level=logging.INFO)
@@ -62,7 +59,12 @@ def get_model(alg, env, tensorboard_log):
     ## the batch size was fixed at 125 to clean the output , must update later
     if alg == "ppo":
         model = PPO(
-            "MlpPolicy", env, verbose=1, tensorboard_log=tensorboard_log, n_steps=500 ,batch_size=125
+            "MlpPolicy",
+            env,
+            verbose=1,
+            tensorboard_log=tensorboard_log,
+            n_steps=500,
+            batch_size=125,
         )
     elif alg == "recurrent_ppo":
         model = RecurrentPPO(
@@ -164,7 +166,6 @@ def main():
     )
 
     if training:
-
         if loading:  # resume training
             model = get_load_model(alg, tensorboard_log, load_path)
             model.set_env(env)
