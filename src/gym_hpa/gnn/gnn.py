@@ -61,7 +61,7 @@ class CustomGNNExtractor(BaseFeaturesExtractor):
 
         # Split the flat observation into node and edge features
         node_feat_size = self.num_nodes * self.node_feature_dim
-        edge_feat_size = self.num_edges * self.edge_feature_dim
+        # edge_feat_size = self.num_edges * self.edge_feature_dim
 
         # Reshape to (num_nodes, node_feature_dim)
         node_feats = observations[:node_feat_size].reshape(
