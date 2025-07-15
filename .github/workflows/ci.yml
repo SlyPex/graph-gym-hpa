@@ -40,12 +40,14 @@ jobs:
         with:
           args: "--version"
         
-      - name: Ruff Linter
-        run: ruff check --fix
       - name: Ruff Formatter
         run: ruff format
 
+      - name: Ruff Linter
+        run: ruff check --fix
+
       - name: Commit and push changes
+        if: success() || failure()
         run: |
           git add .
           if ! git diff --cached --quiet; then
