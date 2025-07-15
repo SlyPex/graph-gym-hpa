@@ -9,7 +9,7 @@ import torch
 from torch_geometric.data import Data
 import requests
 import time
-
+from gym_hpa.envs.online_boutique import OnlineBoutique
 
 PROMETHEUS_URL = "http://my-prometheus:9090"
 

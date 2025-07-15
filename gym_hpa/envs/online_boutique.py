@@ -131,7 +131,15 @@ class OnlineBoutique(gym.Env):
         for d in self.deploymentList:
             d.print_deployment()
 
-        self.observation_space = self.get_observation_space()
+        # self.observation_space = self.get_observation_space()
+        observation_dim = 11 * 4 +  15 * 1
+
+        self.observation_space = spaces.Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=(observation_dim,),
+            dtype=np.float32
+        )
 
         # Action and Observation Space
         # logging.info("[Init] Action Spaces: " + str(self.action_space))
@@ -161,8 +169,13 @@ class OnlineBoutique(gym.Env):
 
     # revision here!
     def step(self, action):
+        print(f"\n=== STEP {self.current_step + 1} START ===")
+        print(f"Action received: Deployment={DEPLOYMENTS[action[0]]}, Move={MOVES[action[1]]}")
+        
         if self.current_step == 1:
+            print("First step - initializing simulation...")
             if not self.k8s:
+                print("Updating simulation data...")
                 self.simulation_update()
 
             self.time_start = time.time()
@@ -192,6 +205,7 @@ class OnlineBoutique(gym.Env):
             n = ID_email
 
         # Execute one time step within the environment
+        print("Taking action...")
         self.take_action(action[ID_MOVES], n)
 
         # Wait a few seconds if on real k8s cluster
@@ -199,11 +213,13 @@ class OnlineBoutique(gym.Env):
             if action[ID_MOVES] != ACTION_DO_NOTHING \
                     and self.constraint_min_pod_replicas is False \
                     and self.constraint_max_pod_replicas is False:
+                print(f'Waiting {self.waiting_period} seconds for action to take effect...')
                 # logging.info('[Step {}] | Waiting {} seconds for enabling action ...'
                 # .format(self.current_step, self.waiting_period))
                 time.sleep(self.waiting_period)  # Wait a few seconds...
 
         # Update observation before reward calculation:
+        print("Updating observations...")
         if self.k8s:  # k8s cluster
             for d in self.deploymentList:
                 d.update_obs_k8s()
@@ -211,6 +227,7 @@ class OnlineBoutique(gym.Env):
             self.simulation_update()
 
         # Get reward
+        print("Calculating reward...")
         reward = self.get_reward
         self.total_reward += reward
 
@@ -222,7 +239,9 @@ class OnlineBoutique(gym.Env):
         logging.info('[Step {}] | Action (Deployment): {} | Action (Move): {} | Reward: {} | Total Reward: {}'.format(
             self.current_step, DEPLOYMENTS[action[0]], MOVES[action[1]], reward, self.total_reward))
 
+        print("Getting state observation...")
         ob = self.get_state()
+        print("Saving observation to CSV...")
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.save_obs_to_csv(self.obs_csv, np.array(ob), date, self.deploymentList[0].latency)
 
@@ -242,6 +261,9 @@ class OnlineBoutique(gym.Env):
             save_to_csv(self.file_results, self.episode_count, mean(self.avg_pods), mean(self.avg_latency),
                         self.total_reward, self.execution_time)
 
+        print(f"Step {self.current_step} completed")
+        print(f"=== END STEP {self.current_step} ===\n")
+        
         # return ob, reward, self.episode_over, self.info
         return np.array(ob), reward, self.episode_over, self.episode_over, self.info
 
@@ -367,6 +389,8 @@ class OnlineBoutique(gym.Env):
         return reward
 
     def get_state(self):
+        print(f"\n=== GET_STATE - Step {self.current_step} ===")
+        
         # Observations: metrics - 3 Metrics!!
         # "number_pods"
         # "cpu"
@@ -425,11 +449,21 @@ class OnlineBoutique(gym.Env):
                 self.deploymentList[ID_email].received_traffic, self.deploymentList[ID_email].transmit_traffic,
             )
 
-        graph = build_graph_with_sim_traffic(ob)
-        data = graph_to_data(graph)
-        print(data)
-        exit()
+        print(f"1. Raw observation tuple created (length: {len(ob)})")
+        print(f"   First 6 values: {ob[:6]}")
         
+        print("2. Building graph with simulation traffic...")
+        graph = build_graph_with_sim_traffic(ob)
+        print(f"   Graph created: {type(graph)}")
+        
+        print("3. Converting graph to data format...")
+        data = graph_to_data(graph)
+        print(f"   Data format: {type(data)}")
+        print(f"   Data attributes: {dir(data) if hasattr(data, '__dict__') else 'No attributes'}")
+        
+        print(f"4. Returning original observation tuple")
+        print("=== END GET_STATE ===\n")
+        print(ob.shape)
         return ob
 
     def get_observation_space(self):
@@ -584,16 +618,22 @@ class OnlineBoutique(gym.Env):
         return reward
 
     def simulation_update(self):
+        print(f"=== SIMULATION_UPDATE - Step {self.current_step} ===")
+        
         if self.current_step == 1:
+            print("Getting initial random sample from dataset...")
             # Get a random sample!
             sample = self.df.sample()
+            print(f"Sample shape: {sample.shape}")
             # print(sample)
 
             for i in range(len(DEPLOYMENTS)):
                 self.deploymentList[i].num_pods = int(sample[DEPLOYMENTS[i] + '_num_pods'].values[0])
                 self.deploymentList[i].num_previous_pods = int(sample[DEPLOYMENTS[i] + '_num_pods'].values[0])
+                print(f"  {DEPLOYMENTS[i]}: pods={self.deploymentList[i].num_pods}")
 
         else:
+            print("Calculating pod differences and finding matching data...")
             pods = []
             previous_pods = []
             diff = []
@@ -604,9 +644,9 @@ class OnlineBoutique(gym.Env):
                 diff.append(aux)
                 self.df['diff-' + DEPLOYMENTS[i]] = self.df[DEPLOYMENTS[i] + '_num_pods'].diff()
 
-            # print(pods)
-            # print(previous_pods)
-            # print(diff)
+            print(f"  Current pods: {pods}")
+            print(f"  Previous pods: {previous_pods}")
+            print(f"  Differences: {diff}")
             # print(self.df_aggr)
 
             data = 0
@@ -617,18 +657,24 @@ class OnlineBoutique(gym.Env):
                     data = self.df.loc[self.df[DEPLOYMENTS[i] + '_num_pods'] == pods[i]]
 
             sample = data.sample()
+            print(f"Found matching sample: {sample.shape}")
             # print(sample)
 
+        print("Updating deployment metrics from sample...")
         for i in range(len(DEPLOYMENTS)):
             self.deploymentList[i].cpu_usage = int(sample[DEPLOYMENTS[i] + '_cpu_usage'].values[0])
             self.deploymentList[i].mem_usage = int(sample[DEPLOYMENTS[i] + '_mem_usage'].values[0])
             self.deploymentList[i].received_traffic = int(sample[DEPLOYMENTS[i] + '_traffic_in'].values[0])
             self.deploymentList[i].transmit_traffic = int(sample[DEPLOYMENTS[i] + '_traffic_out'].values[0])
             self.deploymentList[i].latency = float("{:.3f}".format(sample[DEPLOYMENTS[i] + '_latency'].values[0]))
+            print(f"  {DEPLOYMENTS[i]}: CPU={self.deploymentList[i].cpu_usage}, MEM={self.deploymentList[i].mem_usage}, Latency={self.deploymentList[i].latency}")
 
+        print("Updating replicas for all deployments...")
         for d in self.deploymentList:
             # Update Desired replicas
             d.update_replicas()
+        
+        print("=== END SIMULATION_UPDATE ===")
         return
 
     def save_obs_to_csv(self, obs_file, obs, date, latency):

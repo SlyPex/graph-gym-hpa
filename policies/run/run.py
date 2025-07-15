@@ -1,15 +1,16 @@
 import logging
 import argparse
-
+import torch
 from stable_baselines3 import PPO
 from stable_baselines3 import A2C
 from sb3_contrib import RecurrentPPO
-
+from gym_hpa import *
 from gym_hpa.envs import Redis, OnlineBoutique
 from stable_baselines3.common.callbacks import CheckpointCallback
 
 # Logging
 from policies.util.util import test_model
+from gnn.gnn import CustomGNNExtractor
 
 logging.basicConfig(filename="run.log", filemode="w", level=logging.INFO)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
@@ -53,8 +54,20 @@ args = parser.parse_args()
 def get_model(alg, env, tensorboard_log):
     model = 0
     if alg == "ppo":
+        policy_kwargs = dict(
+                features_extractor_class=CustomGNNExtractor,
+                features_extractor_kwargs=dict(
+                num_nodes=10,
+                node_feature_dim=5,
+                num_edges=20,
+                edge_feature_dim=3,
+                edge_index = torch.tensor([[ 9,  9,  9,  9,  9,  9,  9,  0,  2,  8,  8,  8,  8,  8,  8],
+                                        [ 0,  1,  2,  8,  6,  5,  3,  1,  7,  2,  4,  5,  6,  1, 10]]),  # torch.tensor of shape [2, num_edges]
+                features_dim=128
+            )
+        )
         model = PPO(
-            "MlpPolicy", env, verbose=1, tensorboard_log=tensorboard_log, n_steps=500
+            "MlpPolicy", env, verbose=1, tensorboard_log=tensorboard_log,  policy_kwargs=policy_kwargs , n_steps=500
         )
     elif alg == "recurrent_ppo":
         model = RecurrentPPO(
