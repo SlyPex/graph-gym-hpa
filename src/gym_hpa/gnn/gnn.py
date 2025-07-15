@@ -3,14 +3,18 @@ import torch.nn as nn
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from torch_geometric.nn import GCNConv
 
+
 class CustomGNNExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space, 
-                 num_nodes, 
-                 node_feature_dim, 
-                 num_edges, 
-                 edge_feature_dim, 
-                 edge_index, 
-                 features_dim=128):
+    def __init__(
+        self,
+        observation_space,
+        num_nodes,
+        node_feature_dim,
+        num_edges,
+        edge_feature_dim,
+        edge_index,
+        features_dim=128,
+    ):
         """
         GNN Feature Extractor for SB3 (single observation version).
 
@@ -60,10 +64,14 @@ class CustomGNNExtractor(BaseFeaturesExtractor):
         edge_feat_size = self.num_edges * self.edge_feature_dim
 
         # Reshape to (num_nodes, node_feature_dim)
-        node_feats = observations[:node_feat_size].reshape(self.num_nodes, self.node_feature_dim)
+        node_feats = observations[:node_feat_size].reshape(
+            self.num_nodes, self.node_feature_dim
+        )
 
         # Reshape edge features (ignored in this GCN, but available if needed later)
-        edge_feats = observations[node_feat_size:node_feat_size + edge_feat_size].reshape(self.num_edges, self.edge_feature_dim)
+        edge_feats = observations[
+            node_feat_size : node_feat_size + edge_feat_size
+        ].reshape(self.num_edges, self.edge_feature_dim)
 
         # Run GCN layers
         h = torch.relu(self.conv1(node_feats, self.edge_index))

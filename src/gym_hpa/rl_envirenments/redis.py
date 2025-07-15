@@ -11,17 +11,23 @@ from gymnasium import spaces
 from gymnasium.utils import seeding
 from datetime import datetime
 
-from gym_hpa.envs.deployment import get_max_cpu, get_max_mem, get_max_traffic, get_redis_deployment_list
-from gym_hpa.envs.util import save_to_csv, get_cost_reward, get_latency_reward_redis, get_num_pods
+from gym_hpa.envs.deployment import (
+    get_max_cpu,
+    get_max_mem,
+    get_max_traffic,
+    get_redis_deployment_list,
+)
+from gym_hpa.envs.util import (
+    save_to_csv,
+    get_cost_reward,
+    get_latency_reward_redis,
+    get_num_pods,
+)
 from gym_hpa.paths import DATASET_DIR
 
 csv_path_rd = os.path.join(
-    DATASET_DIR,
-    "onlineboutique",
-    "v1",
-    "redis_gym_observation.csv"
+    DATASET_DIR, "onlineboutique", "v1", "redis_gym_observation.csv"
 )
-
 
 
 # MIN and MAX Replication
@@ -51,8 +57,23 @@ ACTION_TERMINATE_7_REPLICA = 14
 DEPLOYMENTS = ["redis-leader", "redis-follower"]
 
 # Action Moves
-MOVES = ["None", "Add-1", "Add-2", "Add-3", "Add-4", "Add-5", "Add-6", "Add-7",
-         "Stop-1", "Stop-2", "Stop-3", "Stop-4", "Stop-5", "Stop-6", "Stop-7"]
+MOVES = [
+    "None",
+    "Add-1",
+    "Add-2",
+    "Add-3",
+    "Add-4",
+    "Add-5",
+    "Add-6",
+    "Add-7",
+    "Stop-1",
+    "Stop-2",
+    "Stop-3",
+    "Stop-4",
+    "Stop-5",
+    "Stop-6",
+    "Stop-7",
+]
 
 # IDs
 ID_DEPLOYMENTS = 0
@@ -62,13 +83,14 @@ ID_MASTER = 0
 ID_SLAVE = 1
 
 # Reward objectives
-LATENCY = 'latency'
-COST = 'cost'
+LATENCY = "latency"
+COST = "cost"
 
 
 class Redis(gym.Env):
     """Horizontal Scaling for Redis in Kubernetes - an OpenAI gym environment"""
-    metadata = {'render.modes': ['human', 'ansi', 'array']}
+
+    metadata = {"render.modes": ["human", "ansi", "array"]}
 
     def __init__(self, k8s=False, goal_reward=COST, waiting_period=0.3):
         # Define action and observation space
@@ -83,7 +105,11 @@ class Redis(gym.Env):
         self.goal_reward = goal_reward
         self.waiting_period = waiting_period  # seconds to wait after action
 
-        logging.info("[Init] Env: {} | K8s: {} | Version {} |".format(self.name, self.k8s, self.__version__))
+        logging.info(
+            "[Init] Env: {} | K8s: {} | Version {} |".format(
+                self.name, self.k8s, self.__version__
+            )
+        )
 
         # Current Step
         self.current_step = 0
@@ -115,7 +141,9 @@ class Redis(gym.Env):
         self.num_apps = 2
 
         # Deployment Data
-        self.deploymentList = get_redis_deployment_list(self.k8s, self.min_pods, self.max_pods)
+        self.deploymentList = get_redis_deployment_list(
+            self.k8s, self.min_pods, self.max_pods
+        )
 
         self.observation_space = self.get_observation_space()
 
@@ -162,9 +190,11 @@ class Redis(gym.Env):
 
         # Wait a few seconds if on real k8s cluster
         if self.k8s:
-            if action[ID_MOVES] != ACTION_DO_NOTHING \
-                    and self.constraint_min_pod_replicas is False \
-                    and self.constraint_max_pod_replicas is False:
+            if (
+                action[ID_MOVES] != ACTION_DO_NOTHING
+                and self.constraint_min_pod_replicas is False
+                and self.constraint_max_pod_replicas is False
+            ):
                 # logging.info('[Step {}] | Waiting {} seconds for enabling action ...'
                 # .format(self.current_step, self.waiting_period))
                 time.sleep(self.waiting_period)  # Wait a few seconds...
@@ -186,12 +216,21 @@ class Redis(gym.Env):
 
         # Print Step and Total Reward
         # if self.current_step == MAX_STEPS:
-        logging.info('[Step {}] | Action (Deployment): {} | Action (Move): {} | Reward: {} | Total Reward: {}'.format(
-            self.current_step, DEPLOYMENTS[action[0]], MOVES[action[1]], reward, self.total_reward))
+        logging.info(
+            "[Step {}] | Action (Deployment): {} | Action (Move): {} | Reward: {} | Total Reward: {}".format(
+                self.current_step,
+                DEPLOYMENTS[action[0]],
+                MOVES[action[1]],
+                reward,
+                self.total_reward,
+            )
+        )
 
         ob = self.get_state()
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.save_obs_to_csv(self.obs_csv, np.array(ob), date, self.deploymentList[0].latency)
+        self.save_obs_to_csv(
+            self.obs_csv, np.array(ob), date, self.deploymentList[0].latency
+        )
 
         self.info = dict(
             total_reward=self.total_reward,
@@ -204,8 +243,14 @@ class Redis(gym.Env):
         if self.current_step == MAX_STEPS:
             self.episode_count += 1
             self.execution_time = time.time() - self.time_start
-            save_to_csv(self.file_results, self.episode_count, mean(self.avg_pods), mean(self.avg_latency),
-                        self.total_reward, self.execution_time)
+            save_to_csv(
+                self.file_results,
+                self.episode_count,
+                mean(self.avg_pods),
+                mean(self.avg_latency),
+                self.total_reward,
+                self.execution_time,
+            )
 
         # return ob, reward, self.episode_over, self.info
         return np.array(ob), reward, self.episode_over, not self.episode_over, self.info
@@ -214,7 +259,7 @@ class Redis(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def reset(self, *, seed=None, options = None):
+    def reset(self, *, seed=None, options=None):
         """
         Reset the state of the environment and returns an initial observation.
         Returns
@@ -231,11 +276,13 @@ class Redis(gym.Env):
         self.constraint_min_pod_replicas = False
 
         # Deployment Data
-        self.deploymentList = get_redis_deployment_list(self.k8s, self.min_pods, self.max_pods)
+        self.deploymentList = get_redis_deployment_list(
+            self.k8s, self.min_pods, self.max_pods
+        )
 
         return np.array(self.get_state()), self.info
 
-    def render(self, mode='human', close=False):
+    def render(self, mode="human", close=False):
         # Render the environment to the screen
         return
 
@@ -309,18 +356,18 @@ class Redis(gym.Env):
             self.deploymentList[id].terminate_pod_replicas(7, self)
 
         else:
-            logging.info('[Take Action] Unrecognized Action: ' + str(action))
+            logging.info("[Take Action] Unrecognized Action: " + str(action))
 
     @property
     def get_reward(self):
-        """ Calculate Rewards """
-        '''
+        """Calculate Rewards"""
+        """
         ob = self.get_state()
         logging.info('[Reward] | Master Pods: {} | CPU Usage: {} | MEM Usage: {} | Requests: {} | Response Time: {} | '
                      'Slave Pods: {} | CPU Usage: {} | MEM Usage: {} | Requests: {} | Response Time: {} |'.format(
             ob.__getitem__(0), ob.__getitem__(1), ob.__getitem__(2), ob.__getitem__(9), ob.__getitem__(10),
             ob.__getitem__(11), ob.__getitem__(12), ob.__getitem__(13), ob.__getitem__(20), ob.__getitem__(21), ))
-        '''
+        """
         # Reward based on Keyword!
         if self.constraint_max_pod_replicas:
             if self.goal_reward == COST:
@@ -350,19 +397,26 @@ class Redis(gym.Env):
 
         # Return ob
         ob = (
-            self.deploymentList[0].num_pods, self.deploymentList[0].desired_replicas,
-            self.deploymentList[0].cpu_usage, self.deploymentList[0].mem_usage,
-            self.deploymentList[0].received_traffic, self.deploymentList[0].transmit_traffic,
-            self.deploymentList[1].num_pods, self.deploymentList[1].desired_replicas,
-            self.deploymentList[1].cpu_usage, self.deploymentList[1].mem_usage,
-            self.deploymentList[1].received_traffic, self.deploymentList[1].transmit_traffic,
+            self.deploymentList[0].num_pods,
+            self.deploymentList[0].desired_replicas,
+            self.deploymentList[0].cpu_usage,
+            self.deploymentList[0].mem_usage,
+            self.deploymentList[0].received_traffic,
+            self.deploymentList[0].transmit_traffic,
+            self.deploymentList[1].num_pods,
+            self.deploymentList[1].desired_replicas,
+            self.deploymentList[1].cpu_usage,
+            self.deploymentList[1].mem_usage,
+            self.deploymentList[1].received_traffic,
+            self.deploymentList[1].transmit_traffic,
         )
 
         return ob
 
     def get_observation_space(self):
         return spaces.Box(
-                low=np.array([
+            low=np.array(
+                [
                     self.min_pods,  # Number of Pods  -- master metrics
                     self.min_pods,  # Desired Replicas
                     0,  # CPU Usage (in m)
@@ -375,7 +429,10 @@ class Redis(gym.Env):
                     0,  # MEM Usage (in MiB)
                     0,  # Average Number of received traffic
                     0,  # Average Number of transmit traffic
-                ]), high=np.array([
+                ]
+            ),
+            high=np.array(
+                [
                     self.max_pods,  # Number of Pods -- master metrics
                     self.max_pods,  # Desired Replicas
                     get_max_cpu(),  # CPU Usage (in m)
@@ -388,9 +445,10 @@ class Redis(gym.Env):
                     get_max_mem(),  # MEM Usage (in MiB)
                     get_max_traffic(),  # Average Number of received traffic
                     get_max_traffic(),  # Average Number of transmit traffic
-                ]),
-                dtype=np.float32
-            )
+                ]
+            ),
+            dtype=np.float32,
+        )
 
     # calculates the reward based on the objective
     def calculate_reward(self):
@@ -408,10 +466,18 @@ class Redis(gym.Env):
             sample = self.df.sample()
             # print(sample)
 
-            self.deploymentList[0].num_pods = int(sample['redis-leader_num_pods'].values[0])
-            self.deploymentList[0].num_previous_pods = int(sample['redis-leader_num_pods'].values[0])
-            self.deploymentList[1].num_pods = int(sample['redis-follower_num_pods'].values[0])
-            self.deploymentList[1].num_previous_pods = int(sample['redis-follower_num_pods'].values[0])
+            self.deploymentList[0].num_pods = int(
+                sample["redis-leader_num_pods"].values[0]
+            )
+            self.deploymentList[0].num_previous_pods = int(
+                sample["redis-leader_num_pods"].values[0]
+            )
+            self.deploymentList[1].num_pods = int(
+                sample["redis-follower_num_pods"].values[0]
+            )
+            self.deploymentList[1].num_previous_pods = int(
+                sample["redis-follower_num_pods"].values[0]
+            )
 
         else:
             leader_pods = self.deploymentList[0].num_pods
@@ -422,37 +488,55 @@ class Redis(gym.Env):
             diff_leader = leader_pods - leader_previous_pods
             diff_follower = follower_pods - follower_previous_pods
 
-            self.df['diff-leader'] = self.df['redis-leader_num_pods'].diff()
-            self.df['diff-follower'] = self.df['redis-follower_num_pods'].diff()
+            self.df["diff-leader"] = self.df["redis-leader_num_pods"].diff()
+            self.df["diff-follower"] = self.df["redis-follower_num_pods"].diff()
 
-            data = self.df.loc[self.df['redis-leader_num_pods'] == leader_pods]
+            data = self.df.loc[self.df["redis-leader_num_pods"] == leader_pods]
 
-            data = data.loc[data['diff-leader'] == diff_leader]
-
-            if data.size == 0:
-                data = self.df.loc[self.df['redis-leader_num_pods'] == leader_pods]
-
-            data = self.df.loc[self.df['redis-follower_num_pods'] == follower_pods]
-
-            data = data.loc[data['diff-follower'] == diff_follower]
+            data = data.loc[data["diff-leader"] == diff_leader]
 
             if data.size == 0:
-                data = self.df.loc[self.df['redis-follower_num_pods'] == follower_pods]
+                data = self.df.loc[self.df["redis-leader_num_pods"] == leader_pods]
+
+            data = self.df.loc[self.df["redis-follower_num_pods"] == follower_pods]
+
+            data = data.loc[data["diff-follower"] == diff_follower]
+
+            if data.size == 0:
+                data = self.df.loc[self.df["redis-follower_num_pods"] == follower_pods]
 
             sample = data.sample()
             # print(sample)
 
-        self.deploymentList[0].cpu_usage = int(sample['redis-leader_cpu_usage'].values[0])
-        self.deploymentList[0].mem_usage = int(sample['redis-leader_mem_usage'].values[0])
-        self.deploymentList[0].received_traffic = int(sample['redis-leader_traffic_in'].values[0])
-        self.deploymentList[0].transmit_traffic = int(sample['redis-leader_traffic_out'].values[0])
-        self.deploymentList[0].latency = float(sample['redis-leader_latency'].values[0])
+        self.deploymentList[0].cpu_usage = int(
+            sample["redis-leader_cpu_usage"].values[0]
+        )
+        self.deploymentList[0].mem_usage = int(
+            sample["redis-leader_mem_usage"].values[0]
+        )
+        self.deploymentList[0].received_traffic = int(
+            sample["redis-leader_traffic_in"].values[0]
+        )
+        self.deploymentList[0].transmit_traffic = int(
+            sample["redis-leader_traffic_out"].values[0]
+        )
+        self.deploymentList[0].latency = float(sample["redis-leader_latency"].values[0])
 
-        self.deploymentList[1].cpu_usage = int(sample['redis-follower_cpu_usage'].values[0])
-        self.deploymentList[1].mem_usage = int(sample['redis-follower_mem_usage'].values[0])
-        self.deploymentList[1].received_traffic = int(sample['redis-follower_traffic_in'].values[0])
-        self.deploymentList[1].transmit_traffic = int(sample['redis-follower_traffic_out'].values[0])
-        self.deploymentList[1].latency = float(sample['redis-follower_latency'].values[0])
+        self.deploymentList[1].cpu_usage = int(
+            sample["redis-follower_cpu_usage"].values[0]
+        )
+        self.deploymentList[1].mem_usage = int(
+            sample["redis-follower_mem_usage"].values[0]
+        )
+        self.deploymentList[1].received_traffic = int(
+            sample["redis-follower_traffic_in"].values[0]
+        )
+        self.deploymentList[1].transmit_traffic = int(
+            sample["redis-follower_traffic_out"].values[0]
+        )
+        self.deploymentList[1].latency = float(
+            sample["redis-follower_latency"].values[0]
+        )
 
         for d in self.deploymentList:
             # Update Desired replicas
@@ -460,47 +544,48 @@ class Redis(gym.Env):
         return
 
     def save_obs_to_csv(self, obs_file, obs, date, latency):
-        file = open(obs_file, 'a+', newline='')  # append
+        file = open(obs_file, "a+", newline="")  # append
         # file = open(file_name, 'w', newline='') # new
         fields = []
         with file:
-            fields.append('date')
+            fields.append("date")
             for d in self.deploymentList:
-                fields.append(d.name + '_num_pods')
-                fields.append(d.name + '_desired_replicas')
-                fields.append(d.name + '_cpu_usage')
-                fields.append(d.name + '_mem_usage')
-                fields.append(d.name + '_traffic_in')
-                fields.append(d.name + '_traffic_out')
-                fields.append(d.name + '_latency')
+                fields.append(d.name + "_num_pods")
+                fields.append(d.name + "_desired_replicas")
+                fields.append(d.name + "_cpu_usage")
+                fields.append(d.name + "_mem_usage")
+                fields.append(d.name + "_traffic_in")
+                fields.append(d.name + "_traffic_out")
+                fields.append(d.name + "_latency")
 
-            '''
+            """
             fields = ['date', 'redis-leader_num_pods', 'redis-leader_desired_replicas', 'redis-leader_cpu_usage', 'redis-leader_mem_usage',
                       'redis-leader_cpu_request', 'redis-leader_mem_request', 'redis-leader_cpu_limit', 'redis-leader_mem_limit',
                       'redis-leader_traffic_in', 'redis-leader_traffic_out',
                       'redis-follower_num_pods', 'redis-follower_desired_replicas', 'redis-follower_cpu_usage',
                       'redis-follower_mem_usage', 'redis-follower_cpu_request', 'redis-follower_mem_request', 'redis-follower_cpu_limit',
                       'redis-follower_mem_limit', 'redis-follower_traffic_in', 'redis-follower_traffic_out']
-            '''
+            """
             writer = csv.DictWriter(file, fieldnames=fields)
             # writer.writeheader() # write header
 
             writer.writerow(
-                {'date': date,
-                 'redis-leader_num_pods': int("{}".format(obs[0])),
-                 'redis-leader_desired_replicas': int("{}".format(obs[1])),
-                 'redis-leader_cpu_usage': int("{}".format(obs[2])),
-                 'redis-leader_mem_usage': int("{}".format(obs[3])),
-                 'redis-leader_traffic_in': int("{}".format(obs[4])),
-                 'redis-leader_traffic_out': int("{}".format(obs[5])),
-                 'redis-leader_latency': float("{:.3f}".format(latency)),
-                 'redis-follower_num_pods': int("{}".format(obs[6])),
-                 'redis-follower_desired_replicas': int("{}".format(obs[7])),
-                 'redis-follower_cpu_usage': int("{}".format(obs[8])),
-                 'redis-follower_mem_usage': int("{}".format(obs[9])),
-                 'redis-follower_traffic_in': int("{}".format(obs[10])),
-                 'redis-follower_traffic_out': int("{}".format(obs[11])),
-                 'redis-follower_latency': float("{:.3f}".format(latency))
-                 }
+                {
+                    "date": date,
+                    "redis-leader_num_pods": int("{}".format(obs[0])),
+                    "redis-leader_desired_replicas": int("{}".format(obs[1])),
+                    "redis-leader_cpu_usage": int("{}".format(obs[2])),
+                    "redis-leader_mem_usage": int("{}".format(obs[3])),
+                    "redis-leader_traffic_in": int("{}".format(obs[4])),
+                    "redis-leader_traffic_out": int("{}".format(obs[5])),
+                    "redis-leader_latency": float("{:.3f}".format(latency)),
+                    "redis-follower_num_pods": int("{}".format(obs[6])),
+                    "redis-follower_desired_replicas": int("{}".format(obs[7])),
+                    "redis-follower_cpu_usage": int("{}".format(obs[8])),
+                    "redis-follower_mem_usage": int("{}".format(obs[9])),
+                    "redis-follower_traffic_in": int("{}".format(obs[10])),
+                    "redis-follower_traffic_out": int("{}".format(obs[11])),
+                    "redis-follower_latency": float("{:.3f}".format(latency)),
+                }
             )
         return

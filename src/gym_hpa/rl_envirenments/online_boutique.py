@@ -12,9 +12,18 @@ from gymnasium import spaces
 from gymnasium.utils import seeding
 
 # Number of Requests - Discrete Event
-from gym_hpa.envs.deployment import get_max_cpu, get_max_mem, get_max_traffic, get_online_boutique_deployment_list
-from gym_hpa.envs.util import save_to_csv, get_num_pods, get_cost_reward, \
-    get_latency_reward_online_boutique
+from gym_hpa.envs.deployment import (
+    get_max_cpu,
+    get_max_mem,
+    get_max_traffic,
+    get_online_boutique_deployment_list,
+)
+from gym_hpa.envs.util import (
+    save_to_csv,
+    get_num_pods,
+    get_cost_reward,
+    get_latency_reward_online_boutique,
+)
 
 
 ##graph creation
@@ -22,15 +31,11 @@ from gym_hpa.gnn.graphCreation import build_graph_with_sim_traffic
 from gym_hpa.gnn.graphCreation import graph_to_data
 
 
-
 from gym_hpa.paths import DATASET_DIR
 
 
 csv_path_ob = os.path.join(
-    DATASET_DIR,
-    "onlineboutique",
-    "v1",
-    "online_boutique_gym_observation.csv"
+    DATASET_DIR, "onlineboutique", "v1", "online_boutique_gym_observation.csv"
 )
 # MIN and MAX Replication
 MIN_REPLICATION = 1
@@ -56,13 +61,38 @@ ACTION_TERMINATE_6_REPLICA = 13
 ACTION_TERMINATE_7_REPLICA = 14
 
 # Deployments
-DEPLOYMENTS = ["recommendationservice", "productcatalogservice", "cartservice", "adservice",
-               "paymentservice", "shippingservice", "currencyservice", "redis-cart",
-               "checkoutservice", "frontend", "emailservice"]
+DEPLOYMENTS = [
+    "recommendationservice",
+    "productcatalogservice",
+    "cartservice",
+    "adservice",
+    "paymentservice",
+    "shippingservice",
+    "currencyservice",
+    "redis-cart",
+    "checkoutservice",
+    "frontend",
+    "emailservice",
+]
 
 # Action Moves
-MOVES = ["None", "Add-1", "Add-2", "Add-3", "Add-4", "Add-5", "Add-6", "Add-7",
-         "Stop-1", "Stop-2", "Stop-3", "Stop-4", "Stop-5", "Stop-6", "Stop-7"]
+MOVES = [
+    "None",
+    "Add-1",
+    "Add-2",
+    "Add-3",
+    "Add-4",
+    "Add-5",
+    "Add-6",
+    "Add-7",
+    "Stop-1",
+    "Stop-2",
+    "Stop-3",
+    "Stop-4",
+    "Stop-5",
+    "Stop-6",
+    "Stop-7",
+]
 
 # IDs
 ID_DEPLOYMENTS = 0
@@ -81,14 +111,14 @@ ID_frontend = 9
 ID_email = 10
 
 # Reward objectives
-LATENCY = 'latency'
-COST = 'cost'
+LATENCY = "latency"
+COST = "cost"
 
 
 class OnlineBoutique(gym.Env):
     """Horizontal Scaling for Online Boutique in Kubernetes - an OpenAI gym environment"""
 
-    metadata = {'render.modes': ['human', 'ansi', 'array']}
+    metadata = {"render.modes": ["human", "ansi", "array"]}
 
     def __init__(self, k8s=False, goal_reward="cost", waiting_period=0.3):
         # Define action and observation space
@@ -103,7 +133,11 @@ class OnlineBoutique(gym.Env):
         self.goal_reward = goal_reward
         self.waiting_period = waiting_period  # seconds to wait after action
 
-        logging.info("[Init] Env: {} | K8s: {} | Version {} |".format(self.name, self.k8s, self.__version__))
+        logging.info(
+            "[Init] Env: {} | K8s: {} | Version {} |".format(
+                self.name, self.k8s, self.__version__
+            )
+        )
 
         # Current Step
         self.current_step = 0
@@ -135,7 +169,9 @@ class OnlineBoutique(gym.Env):
         self.num_apps = 2
 
         # Deployment Data
-        self.deploymentList = get_online_boutique_deployment_list(self.k8s, self.min_pods, self.max_pods)
+        self.deploymentList = get_online_boutique_deployment_list(
+            self.k8s, self.min_pods, self.max_pods
+        )
 
         # Logging Deployment
         for d in self.deploymentList:
@@ -171,8 +207,10 @@ class OnlineBoutique(gym.Env):
     # revision here!
     def step(self, action):
         print(f"\n=== STEP {self.current_step + 1} START ===")
-        print(f"Action received: Deployment={DEPLOYMENTS[action[0]]}, Move={MOVES[action[1]]}")
-        
+        print(
+            f"Action received: Deployment={DEPLOYMENTS[action[0]]}, Move={MOVES[action[1]]}"
+        )
+
         if self.current_step == 1:
             print("First step - initializing simulation...")
             if not self.k8s:
@@ -211,10 +249,14 @@ class OnlineBoutique(gym.Env):
 
         # Wait a few seconds if on real k8s cluster
         if self.k8s:
-            if action[ID_MOVES] != ACTION_DO_NOTHING \
-                    and self.constraint_min_pod_replicas is False \
-                    and self.constraint_max_pod_replicas is False:
-                print(f'Waiting {self.waiting_period} seconds for action to take effect...')
+            if (
+                action[ID_MOVES] != ACTION_DO_NOTHING
+                and self.constraint_min_pod_replicas is False
+                and self.constraint_max_pod_replicas is False
+            ):
+                print(
+                    f"Waiting {self.waiting_period} seconds for action to take effect..."
+                )
                 # logging.info('[Step {}] | Waiting {} seconds for enabling action ...'
                 # .format(self.current_step, self.waiting_period))
                 time.sleep(self.waiting_period)  # Wait a few seconds...
@@ -237,14 +279,23 @@ class OnlineBoutique(gym.Env):
 
         # Print Step and Total Reward
         # if self.current_step == MAX_STEPS:
-        logging.info('[Step {}] | Action (Deployment): {} | Action (Move): {} | Reward: {} | Total Reward: {}'.format(
-            self.current_step, DEPLOYMENTS[action[0]], MOVES[action[1]], reward, self.total_reward))
+        logging.info(
+            "[Step {}] | Action (Deployment): {} | Action (Move): {} | Reward: {} | Total Reward: {}".format(
+                self.current_step,
+                DEPLOYMENTS[action[0]],
+                MOVES[action[1]],
+                reward,
+                self.total_reward,
+            )
+        )
 
         print("Getting state observation...")
         ob = self.get_state()
         print("Saving observation to CSV...")
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.save_obs_to_csv(self.obs_csv, np.array(ob), date, self.deploymentList[0].latency)
+        self.save_obs_to_csv(
+            self.obs_csv, np.array(ob), date, self.deploymentList[0].latency
+        )
 
         self.info = dict(
             total_reward=self.total_reward,
@@ -259,12 +310,18 @@ class OnlineBoutique(gym.Env):
             self.execution_time = time.time() - self.time_start
 
             # logging.info('Avg. latency : {} ', float("{:.3f}".format(mean(self.avg_latency))))
-            save_to_csv(self.file_results, self.episode_count, mean(self.avg_pods), mean(self.avg_latency),
-                        self.total_reward, self.execution_time)
+            save_to_csv(
+                self.file_results,
+                self.episode_count,
+                mean(self.avg_pods),
+                mean(self.avg_latency),
+                self.total_reward,
+                self.execution_time,
+            )
 
         print(f"Step {self.current_step} completed")
         print(f"=== END STEP {self.current_step} ===\n")
-        
+
         # return ob, reward, self.episode_over, self.info
         return np.array(ob), reward, self.episode_over, self.episode_over, self.info
 
@@ -272,16 +329,16 @@ class OnlineBoutique(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def reset(self ,* , seed = None , options = None):
+    def reset(self, *, seed=None, options=None):
         """
         Reset the state of the environment and returns an initial observation.
         Returns
         -------
         observation (object): the initial observation of the space.
         """
-        print(f"\n=== ENVIRONMENT RESET ===")
-        print(f"Resetting environment state...")
-        
+        print("\n=== ENVIRONMENT RESET ===")
+        print("Resetting environment state...")
+
         self.current_step = 0
         self.episode_over = False
         self.total_reward = 0
@@ -293,16 +350,20 @@ class OnlineBoutique(gym.Env):
 
         print("Reinitializing deployment list...")
         # Deployment Data
-        self.deploymentList = get_online_boutique_deployment_list(self.k8s, self.min_pods, self.max_pods)
+        self.deploymentList = get_online_boutique_deployment_list(
+            self.k8s, self.min_pods, self.max_pods
+        )
 
         print("Getting initial state...")
         initial_state = self.get_state()
-        print(f"Environment reset complete - Initial state shape: {np.array(initial_state).shape}")
+        print(
+            f"Environment reset complete - Initial state shape: {np.array(initial_state).shape}"
+        )
         print("=== END ENVIRONMENT RESET ===\n")
 
         return np.array(initial_state), self.info
 
-    def render(self, mode='human', close=False):
+    def render(self, mode="human", close=False):
         # Render the environment to the screen
         return
 
@@ -394,20 +455,22 @@ class OnlineBoutique(gym.Env):
 
         else:
             print(f"  Unrecognized Action: {action}")
-            logging.info('[Take Action] Unrecognized Action: ' + str(action))
+            logging.info("[Take Action] Unrecognized Action: " + str(action))
 
     @property
     def get_reward(self):
-        """ Calculate Rewards """
+        """Calculate Rewards"""
         print("  Calculating reward...")
-        
+
         # Reward based on Keyword!
         if self.constraint_max_pod_replicas:
             if self.goal_reward == COST:
                 print("  Constraint violation: MAX pod replicas - penalty applied (-1)")
                 return -1  # penalty
             elif self.goal_reward == LATENCY:
-                print("  Constraint violation: MAX pod replicas - penalty applied (-3000)")
+                print(
+                    "  Constraint violation: MAX pod replicas - penalty applied (-3000)"
+                )
                 return -3000  # penalty
 
         if self.constraint_min_pod_replicas:
@@ -415,7 +478,9 @@ class OnlineBoutique(gym.Env):
                 print("  Constraint violation: MIN pod replicas - penalty applied (-1)")
                 return -1  # penalty
             elif self.goal_reward == LATENCY:
-                print("  Constraint violation: MIN pod replicas - penalty applied (-3000)")
+                print(
+                    "  Constraint violation: MIN pod replicas - penalty applied (-3000)"
+                )
                 return -3000  # penalty
 
         # Reward Calculation
@@ -425,7 +490,7 @@ class OnlineBoutique(gym.Env):
 
     def get_state(self):
         print(f"\n=== GET_STATE - Step {self.current_step} ===")
-        
+
         # Observations: metrics - 3 Metrics!!
         # "number_pods"
         # "cpu"
@@ -434,76 +499,97 @@ class OnlineBoutique(gym.Env):
 
         # Return ob
         ob = (
-                self.deploymentList[ID_recommendation].num_pods,
-                self.deploymentList[ID_recommendation].desired_replicas,
-                self.deploymentList[ID_recommendation].cpu_usage, self.deploymentList[ID_recommendation].mem_usage,
-                self.deploymentList[ID_recommendation].received_traffic,
-                self.deploymentList[ID_recommendation].transmit_traffic,
-                self.deploymentList[ID_product_catalog].num_pods,
-                self.deploymentList[ID_product_catalog].desired_replicas,
-                self.deploymentList[ID_product_catalog].cpu_usage, self.deploymentList[ID_product_catalog].mem_usage,
-                self.deploymentList[ID_product_catalog].received_traffic,
-                self.deploymentList[ID_product_catalog].transmit_traffic,
-                self.deploymentList[ID_cart_service].num_pods, self.deploymentList[ID_cart_service].desired_replicas,
-                self.deploymentList[ID_cart_service].cpu_usage, self.deploymentList[ID_cart_service].mem_usage,
-                self.deploymentList[ID_cart_service].received_traffic,
-                self.deploymentList[ID_cart_service].transmit_traffic,
-                self.deploymentList[ID_ad_service].num_pods, self.deploymentList[ID_ad_service].desired_replicas,
-                self.deploymentList[ID_ad_service].cpu_usage, self.deploymentList[ID_ad_service].mem_usage,
-                self.deploymentList[ID_ad_service].received_traffic,
-                self.deploymentList[ID_ad_service].transmit_traffic,
-                self.deploymentList[ID_payment_service].num_pods,
-                self.deploymentList[ID_payment_service].desired_replicas,
-                self.deploymentList[ID_payment_service].cpu_usage, self.deploymentList[ID_payment_service].mem_usage,
-                self.deploymentList[ID_payment_service].received_traffic,
-                self.deploymentList[ID_payment_service].transmit_traffic,
-                self.deploymentList[ID_shipping_service].num_pods,
-                self.deploymentList[ID_shipping_service].desired_replicas,
-                self.deploymentList[ID_shipping_service].cpu_usage, self.deploymentList[ID_shipping_service].mem_usage,
-                self.deploymentList[ID_shipping_service].received_traffic,
-                self.deploymentList[ID_shipping_service].transmit_traffic,
-                self.deploymentList[ID_currency_service].num_pods,
-                self.deploymentList[ID_currency_service].desired_replicas,
-                self.deploymentList[ID_currency_service].cpu_usage, self.deploymentList[ID_currency_service].mem_usage,
-                self.deploymentList[ID_currency_service].received_traffic,
-                self.deploymentList[ID_currency_service].transmit_traffic,
-                self.deploymentList[ID_redis_cart].num_pods, self.deploymentList[ID_redis_cart].desired_replicas,
-                self.deploymentList[ID_redis_cart].cpu_usage, self.deploymentList[ID_redis_cart].mem_usage,
-                self.deploymentList[ID_redis_cart].received_traffic,
-                self.deploymentList[ID_redis_cart].transmit_traffic,
-                self.deploymentList[ID_checkout_service].num_pods,
-                self.deploymentList[ID_checkout_service].desired_replicas,
-                self.deploymentList[ID_checkout_service].cpu_usage, self.deploymentList[ID_checkout_service].mem_usage,
-                self.deploymentList[ID_checkout_service].received_traffic,
-                self.deploymentList[ID_checkout_service].transmit_traffic,
-                self.deploymentList[ID_frontend].num_pods, self.deploymentList[ID_frontend].desired_replicas,
-                self.deploymentList[ID_frontend].cpu_usage, self.deploymentList[ID_frontend].mem_usage,
-                self.deploymentList[ID_frontend].received_traffic, self.deploymentList[ID_frontend].transmit_traffic,
-                self.deploymentList[ID_email].num_pods, self.deploymentList[ID_email].desired_replicas,
-                self.deploymentList[ID_email].cpu_usage, self.deploymentList[ID_email].mem_usage,
-                self.deploymentList[ID_email].received_traffic, self.deploymentList[ID_email].transmit_traffic,
-            )
+            self.deploymentList[ID_recommendation].num_pods,
+            self.deploymentList[ID_recommendation].desired_replicas,
+            self.deploymentList[ID_recommendation].cpu_usage,
+            self.deploymentList[ID_recommendation].mem_usage,
+            self.deploymentList[ID_recommendation].received_traffic,
+            self.deploymentList[ID_recommendation].transmit_traffic,
+            self.deploymentList[ID_product_catalog].num_pods,
+            self.deploymentList[ID_product_catalog].desired_replicas,
+            self.deploymentList[ID_product_catalog].cpu_usage,
+            self.deploymentList[ID_product_catalog].mem_usage,
+            self.deploymentList[ID_product_catalog].received_traffic,
+            self.deploymentList[ID_product_catalog].transmit_traffic,
+            self.deploymentList[ID_cart_service].num_pods,
+            self.deploymentList[ID_cart_service].desired_replicas,
+            self.deploymentList[ID_cart_service].cpu_usage,
+            self.deploymentList[ID_cart_service].mem_usage,
+            self.deploymentList[ID_cart_service].received_traffic,
+            self.deploymentList[ID_cart_service].transmit_traffic,
+            self.deploymentList[ID_ad_service].num_pods,
+            self.deploymentList[ID_ad_service].desired_replicas,
+            self.deploymentList[ID_ad_service].cpu_usage,
+            self.deploymentList[ID_ad_service].mem_usage,
+            self.deploymentList[ID_ad_service].received_traffic,
+            self.deploymentList[ID_ad_service].transmit_traffic,
+            self.deploymentList[ID_payment_service].num_pods,
+            self.deploymentList[ID_payment_service].desired_replicas,
+            self.deploymentList[ID_payment_service].cpu_usage,
+            self.deploymentList[ID_payment_service].mem_usage,
+            self.deploymentList[ID_payment_service].received_traffic,
+            self.deploymentList[ID_payment_service].transmit_traffic,
+            self.deploymentList[ID_shipping_service].num_pods,
+            self.deploymentList[ID_shipping_service].desired_replicas,
+            self.deploymentList[ID_shipping_service].cpu_usage,
+            self.deploymentList[ID_shipping_service].mem_usage,
+            self.deploymentList[ID_shipping_service].received_traffic,
+            self.deploymentList[ID_shipping_service].transmit_traffic,
+            self.deploymentList[ID_currency_service].num_pods,
+            self.deploymentList[ID_currency_service].desired_replicas,
+            self.deploymentList[ID_currency_service].cpu_usage,
+            self.deploymentList[ID_currency_service].mem_usage,
+            self.deploymentList[ID_currency_service].received_traffic,
+            self.deploymentList[ID_currency_service].transmit_traffic,
+            self.deploymentList[ID_redis_cart].num_pods,
+            self.deploymentList[ID_redis_cart].desired_replicas,
+            self.deploymentList[ID_redis_cart].cpu_usage,
+            self.deploymentList[ID_redis_cart].mem_usage,
+            self.deploymentList[ID_redis_cart].received_traffic,
+            self.deploymentList[ID_redis_cart].transmit_traffic,
+            self.deploymentList[ID_checkout_service].num_pods,
+            self.deploymentList[ID_checkout_service].desired_replicas,
+            self.deploymentList[ID_checkout_service].cpu_usage,
+            self.deploymentList[ID_checkout_service].mem_usage,
+            self.deploymentList[ID_checkout_service].received_traffic,
+            self.deploymentList[ID_checkout_service].transmit_traffic,
+            self.deploymentList[ID_frontend].num_pods,
+            self.deploymentList[ID_frontend].desired_replicas,
+            self.deploymentList[ID_frontend].cpu_usage,
+            self.deploymentList[ID_frontend].mem_usage,
+            self.deploymentList[ID_frontend].received_traffic,
+            self.deploymentList[ID_frontend].transmit_traffic,
+            self.deploymentList[ID_email].num_pods,
+            self.deploymentList[ID_email].desired_replicas,
+            self.deploymentList[ID_email].cpu_usage,
+            self.deploymentList[ID_email].mem_usage,
+            self.deploymentList[ID_email].received_traffic,
+            self.deploymentList[ID_email].transmit_traffic,
+        )
 
         print(f"1. Raw observation tuple created (length: {len(ob)})")
         print(f"   First 6 values: {ob[:6]}")
-        
+
         print("2. Building graph with simulation traffic...")
         graph = build_graph_with_sim_traffic(ob)
         print(f"   Graph created: {type(graph)}")
-        
+
         print("3. Converting graph to data format...")
         data = graph_to_data(graph)
         print(f"   Data format: {type(data)}")
-        print(f"   Data attributes: {dir(data) if hasattr(data, '__dict__') else 'No attributes'}")
-        
-        print(f"4. Returning original observation tuple")
+        print(
+            f"   Data attributes: {dir(data) if hasattr(data, '__dict__') else 'No attributes'}"
+        )
+
+        print("4. Returning original observation tuple")
         print("=== END GET_STATE ===\n")
-        
+
         return ob
 
     def get_observation_space(self):
-            return spaces.Box(
-                low=np.array([
+        return spaces.Box(
+            low=np.array(
+                [
                     self.min_pods,  # Number of Pods  -- 1) recommendationservice
                     self.min_pods,  # Desired Replicas
                     0,  # CPU Usage (in m)
@@ -570,7 +656,10 @@ class OnlineBoutique(gym.Env):
                     0,  # MEM Usage (in MiB)
                     0,  # Average Number of received traffic
                     0,  # Average Number of transmit traffic
-                ]), high=np.array([
+                ]
+            ),
+            high=np.array(
+                [
                     self.max_pods,  # Number of Pods -- 1)
                     self.max_pods,  # Desired Replicas
                     get_max_cpu(),  # CPU Usage (in m)
@@ -637,14 +726,15 @@ class OnlineBoutique(gym.Env):
                     get_max_mem(),  # MEM Usage (in MiB)
                     get_max_traffic(),  # Average Number of received traffic
                     get_max_traffic(),  # Average Number of transmit traffic
-                ]),
-                dtype=np.float32
-            )
+                ]
+            ),
+            dtype=np.float32,
+        )
 
     # calculates the desired replica count based on a target metric utilization
     def calculate_reward(self):
         print(f"  Calculating reward with goal: {self.goal_reward}")
-        
+
         # Calculate Number of desired Replicas
         reward = 0
         if self.goal_reward == COST:
@@ -652,14 +742,16 @@ class OnlineBoutique(gym.Env):
             reward = get_cost_reward(self.deploymentList)
         elif self.goal_reward == LATENCY:
             print("  Using latency-based reward calculation...")
-            reward = get_latency_reward_online_boutique(ID_recommendation, self.deploymentList)
+            reward = get_latency_reward_online_boutique(
+                ID_recommendation, self.deploymentList
+            )
 
         print(f"  Final reward value: {reward}")
         return reward
 
     def simulation_update(self):
         print(f"=== SIMULATION_UPDATE - Step {self.current_step} ===")
-        
+
         if self.current_step == 1:
             print("Getting initial random sample from dataset...")
             # Get a random sample!
@@ -668,8 +760,12 @@ class OnlineBoutique(gym.Env):
             # print(sample)
 
             for i in range(len(DEPLOYMENTS)):
-                self.deploymentList[i].num_pods = int(sample[DEPLOYMENTS[i] + '_num_pods'].values[0])
-                self.deploymentList[i].num_previous_pods = int(sample[DEPLOYMENTS[i] + '_num_pods'].values[0])
+                self.deploymentList[i].num_pods = int(
+                    sample[DEPLOYMENTS[i] + "_num_pods"].values[0]
+                )
+                self.deploymentList[i].num_previous_pods = int(
+                    sample[DEPLOYMENTS[i] + "_num_pods"].values[0]
+                )
                 print(f"  {DEPLOYMENTS[i]}: pods={self.deploymentList[i].num_pods}")
 
         else:
@@ -682,7 +778,9 @@ class OnlineBoutique(gym.Env):
                 previous_pods.append(self.deploymentList[i].num_previous_pods)
                 aux = pods[i] - previous_pods[i]
                 diff.append(aux)
-                self.df['diff-' + DEPLOYMENTS[i]] = self.df[DEPLOYMENTS[i] + '_num_pods'].diff()
+                self.df["diff-" + DEPLOYMENTS[i]] = self.df[
+                    DEPLOYMENTS[i] + "_num_pods"
+                ].diff()
 
             print(f"  Current pods: {pods}")
             print(f"  Previous pods: {previous_pods}")
@@ -691,10 +789,10 @@ class OnlineBoutique(gym.Env):
 
             data = 0
             for i in range(len(DEPLOYMENTS)):
-                data = self.df.loc[self.df[DEPLOYMENTS[i] + '_num_pods'] == pods[i]]
-                data = data.loc[data['diff-' + DEPLOYMENTS[i]] == diff[i]]
+                data = self.df.loc[self.df[DEPLOYMENTS[i] + "_num_pods"] == pods[i]]
+                data = data.loc[data["diff-" + DEPLOYMENTS[i]] == diff[i]]
                 if data.size == 0:
-                    data = self.df.loc[self.df[DEPLOYMENTS[i] + '_num_pods'] == pods[i]]
+                    data = self.df.loc[self.df[DEPLOYMENTS[i] + "_num_pods"] == pods[i]]
 
             sample = data.sample()
             print(f"Found matching sample: {sample.shape}")
@@ -702,44 +800,56 @@ class OnlineBoutique(gym.Env):
 
         print("Updating deployment metrics from sample...")
         for i in range(len(DEPLOYMENTS)):
-            self.deploymentList[i].cpu_usage = int(sample[DEPLOYMENTS[i] + '_cpu_usage'].values[0])
-            self.deploymentList[i].mem_usage = int(sample[DEPLOYMENTS[i] + '_mem_usage'].values[0])
-            self.deploymentList[i].received_traffic = int(sample[DEPLOYMENTS[i] + '_traffic_in'].values[0])
-            self.deploymentList[i].transmit_traffic = int(sample[DEPLOYMENTS[i] + '_traffic_out'].values[0])
-            self.deploymentList[i].latency = float("{:.3f}".format(sample[DEPLOYMENTS[i] + '_latency'].values[0]))
-            print(f"  {DEPLOYMENTS[i]}: CPU={self.deploymentList[i].cpu_usage}, MEM={self.deploymentList[i].mem_usage}, Latency={self.deploymentList[i].latency}")
+            self.deploymentList[i].cpu_usage = int(
+                sample[DEPLOYMENTS[i] + "_cpu_usage"].values[0]
+            )
+            self.deploymentList[i].mem_usage = int(
+                sample[DEPLOYMENTS[i] + "_mem_usage"].values[0]
+            )
+            self.deploymentList[i].received_traffic = int(
+                sample[DEPLOYMENTS[i] + "_traffic_in"].values[0]
+            )
+            self.deploymentList[i].transmit_traffic = int(
+                sample[DEPLOYMENTS[i] + "_traffic_out"].values[0]
+            )
+            self.deploymentList[i].latency = float(
+                "{:.3f}".format(sample[DEPLOYMENTS[i] + "_latency"].values[0])
+            )
+            print(
+                f"  {DEPLOYMENTS[i]}: CPU={self.deploymentList[i].cpu_usage}, MEM={self.deploymentList[i].mem_usage}, Latency={self.deploymentList[i].latency}"
+            )
 
         print("Updating replicas for all deployments...")
         for d in self.deploymentList:
             # Update Desired replicas
             d.update_replicas()
-        
+
         print("=== END SIMULATION_UPDATE ===")
         return
 
     def save_obs_to_csv(self, obs_file, obs, date, latency):
-        file = open(obs_file, 'a+', newline='')  # append
+        file = open(obs_file, "a+", newline="")  # append
         # file = open(file_name, 'w', newline='') # new
         fields = []
         with file:
-            fields.append('date')
+            fields.append("date")
             for d in self.deploymentList:
-                fields.append(d.name + '_num_pods')
-                fields.append(d.name + '_desired_replicas')
-                fields.append(d.name + '_cpu_usage')
-                fields.append(d.name + '_mem_usage')
-                fields.append(d.name + '_traffic_in')
-                fields.append(d.name + '_traffic_out')
-                fields.append(d.name + '_latency')
+                fields.append(d.name + "_num_pods")
+                fields.append(d.name + "_desired_replicas")
+                fields.append(d.name + "_cpu_usage")
+                fields.append(d.name + "_mem_usage")
+                fields.append(d.name + "_traffic_in")
+                fields.append(d.name + "_traffic_out")
+                fields.append(d.name + "_latency")
 
-            '''
+            """
             fields = ['date', 'redis-leader_num_pods', 'redis-leader_desired_replicas', 'redis-leader_cpu_usage', 'redis-leader_mem_usage',
                       'redis-leader_cpu_request', 'redis-leader_mem_request', 'redis-leader_cpu_limit', 'redis-leader_mem_limit',
                       'redis-leader_traffic_in', 'redis-leader_traffic_out',
                       'redis-follower_num_pods', 'redis-follower_desired_replicas', 'redis-follower_cpu_usage',
                       'redis-follower_mem_usage', 'redis-follower_cpu_request', 'redis-follower_mem_request', 'redis-follower_cpu_limit',
                       'redis-follower_mem_limit', 'redis-follower_traffic_in', 'redis-follower_traffic_out']
-            '''
+            """
             writer = csv.DictWriter(file, fieldnames=fields)
             # writer.writeheader() # write header
 
@@ -749,94 +859,85 @@ class OnlineBoutique(gym.Env):
             # "redis-cart", "checkoutservice", "frontend", "emailservice"]
 
             writer.writerow(
-                {'date': date,
-                 'recommendationservice_num_pods': int("{}".format(obs[0])),
-                 'recommendationservice_desired_replicas': int("{}".format(obs[1])),
-                 'recommendationservice_cpu_usage': int("{}".format(obs[2])),
-                 'recommendationservice_mem_usage': int("{}".format(obs[3])),
-                 'recommendationservice_traffic_in': int("{}".format(obs[4])),
-                 'recommendationservice_traffic_out': int("{}".format(obs[5])),
-                 'recommendationservice_latency': float("{:.3f}".format(latency)),
-
-                 'productcatalogservice_num_pods': int("{}".format(obs[6])),
-                 'productcatalogservice_desired_replicas': int("{}".format(obs[7])),
-                 'productcatalogservice_cpu_usage': int("{}".format(obs[8])),
-                 'productcatalogservice_mem_usage': int("{}".format(obs[9])),
-                 'productcatalogservice_traffic_in': int("{}".format(obs[10])),
-                 'productcatalogservice_traffic_out': int("{}".format(obs[11])),
-                 'productcatalogservice_latency': float("{:.3f}".format(latency)),
-
-                 'cartservice_num_pods': int("{}".format(obs[12])),
-                 'cartservice_desired_replicas': int("{}".format(obs[13])),
-                 'cartservice_cpu_usage': int("{}".format(obs[14])),
-                 'cartservice_mem_usage': int("{}".format(obs[15])),
-                 'cartservice_traffic_in': int("{}".format(obs[16])),
-                 'cartservice_traffic_out': int("{}".format(obs[17])),
-                 'cartservice_latency': float("{:.3f}".format(latency)),
-
-                 'adservice_num_pods': int("{}".format(obs[18])),
-                 'adservice_desired_replicas': int("{}".format(obs[19])),
-                 'adservice_cpu_usage': int("{}".format(obs[20])),
-                 'adservice_mem_usage': int("{}".format(obs[21])),
-                 'adservice_traffic_in': int("{}".format(obs[22])),
-                 'adservice_traffic_out': int("{}".format(obs[23])),
-                 'adservice_latency': float("{:.3f}".format(latency)),
-
-                 'paymentservice_num_pods': int("{}".format(obs[24])),
-                 'paymentservice_desired_replicas': int("{}".format(obs[25])),
-                 'paymentservice_cpu_usage': int("{}".format(obs[26])),
-                 'paymentservice_mem_usage': int("{}".format(obs[27])),
-                 'paymentservice_traffic_in': int("{}".format(obs[28])),
-                 'paymentservice_traffic_out': int("{}".format(obs[29])),
-                 'paymentservice_latency': float("{:.3f}".format(latency)),
-
-                 'shippingservice_num_pods': int("{}".format(obs[30])),
-                 'shippingservice_desired_replicas': int("{}".format(obs[31])),
-                 'shippingservice_cpu_usage': int("{}".format(obs[32])),
-                 'shippingservice_mem_usage': int("{}".format(obs[33])),
-                 'shippingservice_traffic_in': int("{}".format(obs[34])),
-                 'shippingservice_traffic_out': int("{}".format(obs[35])),
-                 'shippingservice_latency': float("{:.3f}".format(latency)),
-
-                 'currencyservice_num_pods': int("{}".format(obs[36])),
-                 'currencyservice_desired_replicas': int("{}".format(obs[37])),
-                 'currencyservice_cpu_usage': int("{}".format(obs[38])),
-                 'currencyservice_mem_usage': int("{}".format(obs[39])),
-                 'currencyservice_traffic_in': int("{}".format(obs[40])),
-                 'currencyservice_traffic_out': int("{}".format(obs[41])),
-                 'currencyservice_latency': float("{:.3f}".format(latency)),
-
-                 'redis-cart_num_pods': int("{}".format(obs[42])),
-                 'redis-cart_desired_replicas': int("{}".format(obs[43])),
-                 'redis-cart_cpu_usage': int("{}".format(obs[44])),
-                 'redis-cart_mem_usage': int("{}".format(obs[45])),
-                 'redis-cart_traffic_in': int("{}".format(obs[46])),
-                 'redis-cart_traffic_out': int("{}".format(obs[47])),
-                 'redis-cart_latency': float("{:.3f}".format(latency)),
-
-                 'checkoutservice_num_pods': int("{}".format(obs[48])),
-                 'checkoutservice_desired_replicas': int("{}".format(obs[49])),
-                 'checkoutservice_cpu_usage': int("{}".format(obs[50])),
-                 'checkoutservice_mem_usage': int("{}".format(obs[51])),
-                 'checkoutservice_traffic_in': int("{}".format(obs[52])),
-                 'checkoutservice_traffic_out': int("{}".format(obs[53])),
-                 'checkoutservice_latency': float("{:.3f}".format(latency)),
-
-                 'frontend_num_pods': int("{}".format(obs[54])),
-                 'frontend_desired_replicas': int("{}".format(obs[55])),
-                 'frontend_cpu_usage': int("{}".format(obs[56])),
-                 'frontend_mem_usage': int("{}".format(obs[57])),
-                 'frontend_traffic_in': int("{}".format(obs[58])),
-                 'frontend_traffic_out': int("{}".format(obs[59])),
-                 'frontend_latency': float("{:.3f}".format(latency)),
-
-                 'emailservice_num_pods': int("{}".format(obs[60])),
-                 'emailservice_desired_replicas': int("{}".format(obs[61])),
-                 'emailservice_cpu_usage': int("{}".format(obs[62])),
-                 'emailservice_mem_usage': int("{}".format(obs[63])),
-                 'emailservice_traffic_in': int("{}".format(obs[64])),
-                 'emailservice_traffic_out': int("{}".format(obs[65])),
-                 'emailservice_latency': float("{:.3f}".format(latency))
-                 }
+                {
+                    "date": date,
+                    "recommendationservice_num_pods": int("{}".format(obs[0])),
+                    "recommendationservice_desired_replicas": int("{}".format(obs[1])),
+                    "recommendationservice_cpu_usage": int("{}".format(obs[2])),
+                    "recommendationservice_mem_usage": int("{}".format(obs[3])),
+                    "recommendationservice_traffic_in": int("{}".format(obs[4])),
+                    "recommendationservice_traffic_out": int("{}".format(obs[5])),
+                    "recommendationservice_latency": float("{:.3f}".format(latency)),
+                    "productcatalogservice_num_pods": int("{}".format(obs[6])),
+                    "productcatalogservice_desired_replicas": int("{}".format(obs[7])),
+                    "productcatalogservice_cpu_usage": int("{}".format(obs[8])),
+                    "productcatalogservice_mem_usage": int("{}".format(obs[9])),
+                    "productcatalogservice_traffic_in": int("{}".format(obs[10])),
+                    "productcatalogservice_traffic_out": int("{}".format(obs[11])),
+                    "productcatalogservice_latency": float("{:.3f}".format(latency)),
+                    "cartservice_num_pods": int("{}".format(obs[12])),
+                    "cartservice_desired_replicas": int("{}".format(obs[13])),
+                    "cartservice_cpu_usage": int("{}".format(obs[14])),
+                    "cartservice_mem_usage": int("{}".format(obs[15])),
+                    "cartservice_traffic_in": int("{}".format(obs[16])),
+                    "cartservice_traffic_out": int("{}".format(obs[17])),
+                    "cartservice_latency": float("{:.3f}".format(latency)),
+                    "adservice_num_pods": int("{}".format(obs[18])),
+                    "adservice_desired_replicas": int("{}".format(obs[19])),
+                    "adservice_cpu_usage": int("{}".format(obs[20])),
+                    "adservice_mem_usage": int("{}".format(obs[21])),
+                    "adservice_traffic_in": int("{}".format(obs[22])),
+                    "adservice_traffic_out": int("{}".format(obs[23])),
+                    "adservice_latency": float("{:.3f}".format(latency)),
+                    "paymentservice_num_pods": int("{}".format(obs[24])),
+                    "paymentservice_desired_replicas": int("{}".format(obs[25])),
+                    "paymentservice_cpu_usage": int("{}".format(obs[26])),
+                    "paymentservice_mem_usage": int("{}".format(obs[27])),
+                    "paymentservice_traffic_in": int("{}".format(obs[28])),
+                    "paymentservice_traffic_out": int("{}".format(obs[29])),
+                    "paymentservice_latency": float("{:.3f}".format(latency)),
+                    "shippingservice_num_pods": int("{}".format(obs[30])),
+                    "shippingservice_desired_replicas": int("{}".format(obs[31])),
+                    "shippingservice_cpu_usage": int("{}".format(obs[32])),
+                    "shippingservice_mem_usage": int("{}".format(obs[33])),
+                    "shippingservice_traffic_in": int("{}".format(obs[34])),
+                    "shippingservice_traffic_out": int("{}".format(obs[35])),
+                    "shippingservice_latency": float("{:.3f}".format(latency)),
+                    "currencyservice_num_pods": int("{}".format(obs[36])),
+                    "currencyservice_desired_replicas": int("{}".format(obs[37])),
+                    "currencyservice_cpu_usage": int("{}".format(obs[38])),
+                    "currencyservice_mem_usage": int("{}".format(obs[39])),
+                    "currencyservice_traffic_in": int("{}".format(obs[40])),
+                    "currencyservice_traffic_out": int("{}".format(obs[41])),
+                    "currencyservice_latency": float("{:.3f}".format(latency)),
+                    "redis-cart_num_pods": int("{}".format(obs[42])),
+                    "redis-cart_desired_replicas": int("{}".format(obs[43])),
+                    "redis-cart_cpu_usage": int("{}".format(obs[44])),
+                    "redis-cart_mem_usage": int("{}".format(obs[45])),
+                    "redis-cart_traffic_in": int("{}".format(obs[46])),
+                    "redis-cart_traffic_out": int("{}".format(obs[47])),
+                    "redis-cart_latency": float("{:.3f}".format(latency)),
+                    "checkoutservice_num_pods": int("{}".format(obs[48])),
+                    "checkoutservice_desired_replicas": int("{}".format(obs[49])),
+                    "checkoutservice_cpu_usage": int("{}".format(obs[50])),
+                    "checkoutservice_mem_usage": int("{}".format(obs[51])),
+                    "checkoutservice_traffic_in": int("{}".format(obs[52])),
+                    "checkoutservice_traffic_out": int("{}".format(obs[53])),
+                    "checkoutservice_latency": float("{:.3f}".format(latency)),
+                    "frontend_num_pods": int("{}".format(obs[54])),
+                    "frontend_desired_replicas": int("{}".format(obs[55])),
+                    "frontend_cpu_usage": int("{}".format(obs[56])),
+                    "frontend_mem_usage": int("{}".format(obs[57])),
+                    "frontend_traffic_in": int("{}".format(obs[58])),
+                    "frontend_traffic_out": int("{}".format(obs[59])),
+                    "frontend_latency": float("{:.3f}".format(latency)),
+                    "emailservice_num_pods": int("{}".format(obs[60])),
+                    "emailservice_desired_replicas": int("{}".format(obs[61])),
+                    "emailservice_cpu_usage": int("{}".format(obs[62])),
+                    "emailservice_mem_usage": int("{}".format(obs[63])),
+                    "emailservice_traffic_in": int("{}".format(obs[64])),
+                    "emailservice_traffic_out": int("{}".format(obs[65])),
+                    "emailservice_latency": float("{:.3f}".format(latency)),
+                }
             )
         return

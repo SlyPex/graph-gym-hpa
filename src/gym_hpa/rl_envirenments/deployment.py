@@ -14,7 +14,7 @@ CPU_WEIGHT = 0.7
 MEM_WEIGHT = 0.3
 
 # port-forward in k8s cluster
-PROMETHEUS_URL = 'http://localhost:9090/'
+PROMETHEUS_URL = "http://localhost:9090/"
 
 # Endpoint of your Kube cluster: kube proxy enabled
 HOST = "http://localhost:8080"
@@ -25,60 +25,192 @@ TOKEN = ""
 
 def get_redis_deployment_list(k8s, min, max):
     deployment_list = [
-        DeploymentStatus(k8s, "redis-leader", "redis", "leader", "docker.io/redis:6.0.5",
-                         max, min, 250, 500, 250, 500),
-        DeploymentStatus(k8s, "redis-follower", "redis", "follower",
-                         "gcr.io/google_samples/gb-redis-follower:v2",
-                         max, min, 250, 500, 250, 500)]
+        DeploymentStatus(
+            k8s,
+            "redis-leader",
+            "redis",
+            "leader",
+            "docker.io/redis:6.0.5",
+            max,
+            min,
+            250,
+            500,
+            250,
+            500,
+        ),
+        DeploymentStatus(
+            k8s,
+            "redis-follower",
+            "redis",
+            "follower",
+            "gcr.io/google_samples/gb-redis-follower:v2",
+            max,
+            min,
+            250,
+            500,
+            250,
+            500,
+        ),
+    ]
     return deployment_list
 
 
 def get_online_boutique_deployment_list(k8s, min, max):
     deployment_list = [
         # 1
-        DeploymentStatus(k8s, "recommendationservice", "onlineboutique", "recommendationservice",
-                         "quay.io/signalfuse/microservices-demo-recommendationservice:433c23881a",
-                         max, min, 100, 200, 220, 450),
+        DeploymentStatus(
+            k8s,
+            "recommendationservice",
+            "onlineboutique",
+            "recommendationservice",
+            "quay.io/signalfuse/microservices-demo-recommendationservice:433c23881a",
+            max,
+            min,
+            100,
+            200,
+            220,
+            450,
+        ),
         # 2
-        DeploymentStatus(k8s, "productcatalogservice", "onlineboutique", "productcatalogservice",
-                         "quay.io/signalfuse/microservices-demo-productcatalogservice:433c23881a",
-                         max, min, 100, 200, 64, 128),
+        DeploymentStatus(
+            k8s,
+            "productcatalogservice",
+            "onlineboutique",
+            "productcatalogservice",
+            "quay.io/signalfuse/microservices-demo-productcatalogservice:433c23881a",
+            max,
+            min,
+            100,
+            200,
+            64,
+            128,
+        ),
         # 3
-        DeploymentStatus(k8s, "cartservice", "onlineboutique", "cartservice",
-                         "quay.io/signalfuse/microservices-demo-cartservice:433c23881a",
-                         max, min, 200, 300, 64, 128),
+        DeploymentStatus(
+            k8s,
+            "cartservice",
+            "onlineboutique",
+            "cartservice",
+            "quay.io/signalfuse/microservices-demo-cartservice:433c23881a",
+            max,
+            min,
+            200,
+            300,
+            64,
+            128,
+        ),
         # 4
-        DeploymentStatus(k8s, "adservice", "onlineboutique", "adservice",
-                         "quay.io/signalfuse/microservices-demo-adservice:433c23881a",
-                         max, min, 200, 300, 180, 300),
+        DeploymentStatus(
+            k8s,
+            "adservice",
+            "onlineboutique",
+            "adservice",
+            "quay.io/signalfuse/microservices-demo-adservice:433c23881a",
+            max,
+            min,
+            200,
+            300,
+            180,
+            300,
+        ),
         # 5
-        DeploymentStatus(k8s, "paymentservice", "onlineboutique", "paymentservice",
-                         "quay.io/signalfuse/microservices-demo-paymentservice:433c23881a",
-                         max, min, 100, 200, 64, 128),
+        DeploymentStatus(
+            k8s,
+            "paymentservice",
+            "onlineboutique",
+            "paymentservice",
+            "quay.io/signalfuse/microservices-demo-paymentservice:433c23881a",
+            max,
+            min,
+            100,
+            200,
+            64,
+            128,
+        ),
         # 6
-        DeploymentStatus(k8s, "shippingservice", "onlineboutique", "shippingservice",
-                         "quay.io/signalfuse/microservices-demo-shippingservice:433c23881a",
-                         max, min, 100, 200, 64, 128),
+        DeploymentStatus(
+            k8s,
+            "shippingservice",
+            "onlineboutique",
+            "shippingservice",
+            "quay.io/signalfuse/microservices-demo-shippingservice:433c23881a",
+            max,
+            min,
+            100,
+            200,
+            64,
+            128,
+        ),
         # 7
-        DeploymentStatus(k8s, "currencyservice", "onlineboutique", "currencyservice",
-                         "quay.io/signalfuse/microservices-demo-currencyservice:433c23881a",
-                         max, min, 100, 200, 64, 128),
+        DeploymentStatus(
+            k8s,
+            "currencyservice",
+            "onlineboutique",
+            "currencyservice",
+            "quay.io/signalfuse/microservices-demo-currencyservice:433c23881a",
+            max,
+            min,
+            100,
+            200,
+            64,
+            128,
+        ),
         # 8
-        DeploymentStatus(k8s, "redis-cart", "onlineboutique", "redis-cart",
-                         "redis:alpine",
-                         max, min, 70, 125, 200, 256),
+        DeploymentStatus(
+            k8s,
+            "redis-cart",
+            "onlineboutique",
+            "redis-cart",
+            "redis:alpine",
+            max,
+            min,
+            70,
+            125,
+            200,
+            256,
+        ),
         # 9
-        DeploymentStatus(k8s, "checkoutservice", "onlineboutique", "checkoutservice",
-                         "quay.io/signalfuse/microservices-demo-checkoutservice:433c23881a",
-                         max, min, 100, 200, 64, 128),
+        DeploymentStatus(
+            k8s,
+            "checkoutservice",
+            "onlineboutique",
+            "checkoutservice",
+            "quay.io/signalfuse/microservices-demo-checkoutservice:433c23881a",
+            max,
+            min,
+            100,
+            200,
+            64,
+            128,
+        ),
         # 10
-        DeploymentStatus(k8s, "frontend", "onlineboutique", "frontend",
-                         "quay.io/signalfuse/microservices-demo-frontend:433c23881a",
-                         max, min, 100, 200, 64, 128),
+        DeploymentStatus(
+            k8s,
+            "frontend",
+            "onlineboutique",
+            "frontend",
+            "quay.io/signalfuse/microservices-demo-frontend:433c23881a",
+            max,
+            min,
+            100,
+            200,
+            64,
+            128,
+        ),
         # 11
-        DeploymentStatus(k8s, "emailservice", "onlineboutique", "emailservice",
-                         "quay.io/signalfuse/microservices-demo-frontend:433c23881a",
-                         max, min, 100, 200, 64, 128),
+        DeploymentStatus(
+            k8s,
+            "emailservice",
+            "onlineboutique",
+            "emailservice",
+            "quay.io/signalfuse/microservices-demo-frontend:433c23881a",
+            max,
+            min,
+            100,
+            200,
+            64,
+            128,
+        ),
     ]
     return deployment_list
 
@@ -93,6 +225,7 @@ def get_max_mem():
 
 def get_max_traffic():
     return MAX_TRAFFIC
+
 
 def convert_to_milli_cpu(value):
     new_value = int(value[:-1])
@@ -120,15 +253,28 @@ def convert_to_mega_memory(value):
     if last_two == "Ki":
         size = len(value)
         # Slice string to remove last 2 characters
-        new_value = int(value[:size - 2])
+        new_value = int(value[: size - 2])
         new_value = int(new_value / 1000)
 
     return new_value
 
 
 class DeploymentStatus:  # Deployment Status (Workload)
-    def __init__(self, k8s, name, namespace, container_name, container_image, max_pods, min_pods,
-                 cpu_request, cpu_limit, mem_request, mem_limit, threshold=0.75):
+    def __init__(
+        self,
+        k8s,
+        name,
+        namespace,
+        container_name,
+        container_image,
+        max_pods,
+        min_pods,
+        cpu_request,
+        cpu_limit,
+        mem_request,
+        mem_limit,
+        threshold=0.75,
+    ):
         self.name = name
         # namespace
         self.namespace = namespace
@@ -190,8 +336,12 @@ class DeploymentStatus:  # Deployment Status (Workload)
         self.mem_usage = random.randint(1, get_max_mem())  # sample['mem'].values[0]
 
         # Current Requests
-        self.received_traffic = random.randint(1, get_max_traffic())  # sample['traffic_in'].values[0]
-        self.transmit_traffic = random.randint(1, get_max_traffic())  # sample['traffic_out'].values[0]
+        self.received_traffic = random.randint(
+            1, get_max_traffic()
+        )  # sample['traffic_in'].values[0]
+        self.transmit_traffic = random.randint(
+            1, get_max_traffic()
+        )  # sample['traffic_out'].values[0]
 
         # Throughput PING INLINE
         # self.ping = 0
@@ -200,7 +350,7 @@ class DeploymentStatus:  # Deployment Status (Workload)
         self.k8s = k8s
 
         # csv file
-        self.csv = self.namespace + '_' + self.name + '.csv'
+        self.csv = self.namespace + "_" + self.name + ".csv"
 
         # time between API calls if failure happens
         self.sleep = 0.2
@@ -238,7 +388,9 @@ class DeploymentStatus:  # Deployment Status (Workload)
             # metrics api
             # self.metrics_api = client.CustomObjectsApi(self.client)
             # Get deployment object
-            self.deployment_object = self.apps_v1.read_namespaced_deployment(name=self.name, namespace=self.namespace)
+            self.deployment_object = self.apps_v1.read_namespaced_deployment(
+                name=self.name, namespace=self.namespace
+            )
 
             # Update number of Pods
             self.num_pods = self.deployment_object.spec.replicas
@@ -255,7 +407,7 @@ class DeploymentStatus:  # Deployment Status (Workload)
         self.pod_names = []
         pods = self.v1.list_namespaced_pod(namespace=self.namespace)
         for p in pods.items:
-            if p.metadata.labels['app'] == self.name:
+            if p.metadata.labels["app"] == self.name:
                 self.pod_names.append(p.metadata.name)
 
         self.cpu_usage = 0
@@ -267,7 +419,9 @@ class DeploymentStatus:  # Deployment Status (Workload)
         self.num_previous_pods = self.deployment_object.spec.replicas
 
         # Get deployment object
-        self.deployment_object = self.apps_v1.read_namespaced_deployment(name=self.name, namespace=self.namespace)
+        self.deployment_object = self.apps_v1.read_namespaced_deployment(
+            name=self.name, namespace=self.namespace
+        )
 
         # Update number of Pods
         self.num_pods = self.deployment_object.spec.replicas
@@ -276,59 +430,70 @@ class DeploymentStatus:  # Deployment Status (Workload)
 
         # Get received / transmit traffic
         for p in self.pod_names:
-            query_cpu = 'sum(irate(container_cpu_usage_seconds_total{namespace=' \
-                        '"' + self.namespace + '", pod="' + p + '"}[5m])) by (pod)'
+            query_cpu = (
+                "sum(irate(container_cpu_usage_seconds_total{namespace="
+                '"' + self.namespace + '", pod="' + p + '"}[5m])) by (pod)'
+            )
 
-            query_mem = 'sum(irate(container_memory_working_set_bytes{namespace=' \
-                        '"' + self.namespace + '", pod="' + p + '"}[5m])) by (pod)'
+            query_mem = (
+                "sum(irate(container_memory_working_set_bytes{namespace="
+                '"' + self.namespace + '", pod="' + p + '"}[5m])) by (pod)'
+            )
 
-            query_received = 'sum(irate(container_network_receive_bytes_total{namespace=' \
-                             '"' + self.namespace + '", pod="' + p + '"}[5m])) by (pod)'
-            query_transmit = 'sum(irate(container_network_transmit_bytes_total{namespace="' \
-                             + self.namespace + '", pod="' + p + '"}[5m])) by (pod)'
+            query_received = (
+                "sum(irate(container_network_receive_bytes_total{namespace="
+                '"' + self.namespace + '", pod="' + p + '"}[5m])) by (pod)'
+            )
+            query_transmit = (
+                'sum(irate(container_network_transmit_bytes_total{namespace="'
+                + self.namespace
+                + '", pod="'
+                + p
+                + '"}[5m])) by (pod)'
+            )
 
             # -------------- CPU ----------------
             results_cpu = self.fetch_prom(query_cpu)
             if results_cpu:
-                cpu = int(float(results_cpu[0]['value'][1]) * 1000)  # saved as m
+                cpu = int(float(results_cpu[0]["value"][1]) * 1000)  # saved as m
                 self.cpu_usage += cpu
 
             # -------------- MEM ----------------
             results_mem = self.fetch_prom(query_mem)
             if results_mem:
-                mem = int(float(results_mem[0]['value'][1]) / 1000000)  # saved as Mi
+                mem = int(float(results_mem[0]["value"][1]) / 1000000)  # saved as Mi
                 self.mem_usage += mem
 
             # -------------- Received Traffic  ----------------
             results_received = self.fetch_prom(query_received)
             if results_received:
-                rec = int(float(results_received[0]['value'][1]))
+                rec = int(float(results_received[0]["value"][1]))
                 rec = int(rec / 1000)  # saved as KBit/s
                 self.received_traffic += rec
 
             # -------------- Transmit Traffic  ----------------
             results_transmit = self.fetch_prom(query_transmit)
             if results_transmit:
-                trans = int(float(results_transmit[0]['value'][1]))
+                trans = int(float(results_transmit[0]["value"][1]))
                 trans = int(trans / 1000)  # saved as KBit/s
                 self.transmit_traffic += trans
 
-            if self.name == 'redis-leader':
-                query_duration = 'sum(irate(redis_commands_duration_seconds_total[5m]))'
-                query_processed = 'sum(irate(redis_commands_processed_total[5m]))'
+            if self.name == "redis-leader":
+                query_duration = "sum(irate(redis_commands_duration_seconds_total[5m]))"
+                query_processed = "sum(irate(redis_commands_processed_total[5m]))"
                 redis_duration = 0
                 redis_processed = 0
 
                 results_duration = self.fetch_prom(query_duration)
                 if results_duration:
-                    dur = float(results_duration[0]['value'][1])
+                    dur = float(results_duration[0]["value"][1])
                     dur = dur * 1000  # saved as ms
                     redis_duration = float("{:.3f}".format(dur))
                 # logging.info("[Deployment] redis duration (in ms): " + str(self.redis_duration))
 
                 results_processed = self.fetch_prom(query_processed)
                 if results_processed:
-                    proc = float(results_processed[0]['value'][1])
+                    proc = float(results_processed[0]["value"][1])
                     redis_processed = float("{:.3f}".format(proc))
                 # logging.info("[Deployment] redis processed: " + str(self.redis_processed))
 
@@ -340,13 +505,15 @@ class DeploymentStatus:  # Deployment Status (Workload)
                 self.latency = float("{:.3f}".format(redis_latency))
                 # logging.info("[Deployment] redis latency (in ms): " + str(self.redis_latency))
 
-            if self.name == 'recommendationservice':
-                query_get_cart = 'locust_requests_avg_response_time{method="GET", name="/cart"}'
+            if self.name == "recommendationservice":
+                query_get_cart = (
+                    'locust_requests_avg_response_time{method="GET", name="/cart"}'
+                )
                 get_cart = 0
 
                 results_get_cart = self.fetch_prom(query_get_cart)
                 if results_get_cart:
-                    dur = float(results_get_cart[0]['value'][1])
+                    dur = float(results_get_cart[0]["value"][1])
                     get_cart = float("{:.3f}".format(dur))
                     # logging.info("[Deployment] get cart (in ms): " + str(get_cart))
 
@@ -363,14 +530,20 @@ class DeploymentStatus:  # Deployment Status (Workload)
         cpu_target_usage = self.num_pods * self.cpu_target
         mem_target_usage = self.num_pods * self.mem_target
 
-        desired_replicas_cpu = math.ceil(self.num_pods * (self.cpu_usage / cpu_target_usage))
-        desired_replicas_mem = math.ceil(self.num_pods * (self.mem_usage / mem_target_usage))
+        desired_replicas_cpu = math.ceil(
+            self.num_pods * (self.cpu_usage / cpu_target_usage)
+        )
+        desired_replicas_mem = math.ceil(
+            self.num_pods * (self.mem_usage / mem_target_usage)
+        )
 
         # CPU and Memory
         # CPU = 0.7
         # MEM = 0.3
-        self.desired_replicas = math.ceil((self.cpu_weight * desired_replicas_cpu)
-                                          + (self.mem_weight * desired_replicas_mem))
+        self.desired_replicas = math.ceil(
+            (self.cpu_weight * desired_replicas_cpu)
+            + (self.mem_weight * desired_replicas_mem)
+        )
 
         # min = 1
         if self.desired_replicas == 0:
@@ -384,8 +557,9 @@ class DeploymentStatus:  # Deployment Status (Workload)
 
     def fetch_prom(self, query):
         try:
-            response = requests.get(PROMETHEUS_URL + '/api/v1/query',
-                                    params={'query': query})
+            response = requests.get(
+                PROMETHEUS_URL + "/api/v1/query", params={"query": query}
+            )
 
         except requests.exceptions.RequestException as e:
             print(e)
@@ -393,14 +567,14 @@ class DeploymentStatus:  # Deployment Status (Workload)
             time.sleep(self.sleep)
             return self.fetch_prom(query)
 
-        if response.json()['status'] != "success":
-            print("Error processing the request: " + response.json()['status'])
-            print("The Error is: " + response.json()['error'])
+        if response.json()["status"] != "success":
+            print("Error processing the request: " + response.json()["status"])
+            print("The Error is: " + response.json()["error"])
             print("Retrying in {}s...".format(self.sleep))
             time.sleep(self.sleep)
             return self.fetch_prom(query)
 
-        result = response.json()['data']['result']
+        result = response.json()["data"]["result"]
         return result
 
     def print_deployment(self):
@@ -413,13 +587,19 @@ class DeploymentStatus:  # Deployment Status (Workload)
         logging.info("[Deployment] MIN Pods: " + str(self.min_pods))
         logging.info("[Deployment] CPU Usage (in m): " + str(self.cpu_usage))
         logging.info("[Deployment] MEM Usage (in Mi): " + str(self.mem_usage))
-        logging.info("[Deployment] Received traffic (in Kbit/s): " + str(self.received_traffic))
-        logging.info("[Deployment] Transmit traffic (in Kbit/s): " + str(self.transmit_traffic))
+        logging.info(
+            "[Deployment] Received traffic (in Kbit/s): " + str(self.received_traffic)
+        )
+        logging.info(
+            "[Deployment] Transmit traffic (in Kbit/s): " + str(self.transmit_traffic)
+        )
         logging.info("[Deployment] latency (in ms): " + str(self.latency))
 
     def update_deployment(self, new_replicas):
         # Get deployment object
-        self.deployment_object = self.apps_v1.read_namespaced_deployment(name=self.name, namespace=self.namespace)
+        self.deployment_object = self.apps_v1.read_namespaced_deployment(
+            name=self.name, namespace=self.namespace
+        )
         # logging.info(self.deployment_object)
 
         # Update previous number of pods
