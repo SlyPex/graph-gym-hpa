@@ -8,7 +8,9 @@ import gymnasium as gym
 import numpy as np
 import pandas as pd
 from gymnasium import spaces
-from gymnasium.utils import seeding
+from gymnasium.utils import seeding 
+from gymnasium.spaces import Box
+
 
 # Number of Requests - Discrete Event
 from gym_hpa.rl_environments.deployment import (
@@ -28,6 +30,8 @@ from gym_hpa.rl_environments.util import (
 ##graph creation
 from gym_hpa.gnn.graphCreation import build_graph_with_sim_traffic
 from gym_hpa.gnn.graphCreation import graph_to_data
+from gym_hpa.gnn.gnn import CustomGNNExtractor
+from gym_hpa.gnn.gnn import flatten_graph_data
 
 
 from gym_hpa.paths import DATASET_DIR
@@ -176,7 +180,13 @@ class OnlineBoutique(gym.Env):
         for d in self.deploymentList:
             d.print_deployment()
 
-        self.observation_space = self.get_observation_space()
+        # self.observation_space = self.get_observation_space()
+        self.observation_space = Box(
+                        low=-np.inf,
+                        high=np.inf,
+                        shape=(59,),
+                        dtype=np.float32
+                )
 
         # Action and Observation Space
         # logging.info("[Init] Action Spaces: " + str(self.action_space))
@@ -292,9 +302,9 @@ class OnlineBoutique(gym.Env):
         ob = self.get_state()
         print("Saving observation to CSV...")
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.save_obs_to_csv(
-            self.obs_csv, np.array(ob), date, self.deploymentList[0].latency
-        )
+        # self.save_obs_to_csv(
+        #     self.obs_csv, np.array(ob), date, self.deploymentList[0].latency
+        # )
 
         self.info = dict(
             total_reward=self.total_reward,
@@ -576,13 +586,15 @@ class OnlineBoutique(gym.Env):
         print("3. Converting graph to data format...")
         data = graph_to_data(graph)
         print(f"   Data format: {type(data)}")
-        print(
-            f"   Data attributes: {dir(data) if hasattr(data, '__dict__') else 'No attributes'}"
-        )
-
+        print(data.edge_index)
         print("4. Returning original observation tuple")
         print("=== END GET_STATE ===\n")
-
+        
+        data = flatten_graph_data(data)
+        print("flattened graph data")
+        print(data.shape)
+        # exit()
+        ob = data
         return ob
 
     def get_observation_space(self):

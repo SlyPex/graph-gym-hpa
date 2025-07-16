@@ -4,6 +4,12 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from torch_geometric.nn import GCNConv
 
 
+def flatten_graph_data(data):
+    node_feats_flat = data.x.flatten()
+    edge_feats_flat = data.edge_attr.flatten()
+    return torch.cat([node_feats_flat, edge_feats_flat])
+
+
 class CustomGNNExtractor(BaseFeaturesExtractor):
     def __init__(
         self,
@@ -55,10 +61,11 @@ class CustomGNNExtractor(BaseFeaturesExtractor):
         Returns:
             features: Tensor of shape (1, features_dim)
         """
+        print("IN THE GNN FEATURE EXTRACTOR")
 
         # Remove batch dimension to simplify (input is (1, obs_dim), take the first element)
         observations = observations[0]
-
+        print(observations)
         # Split the flat observation into node and edge features
         node_feat_size = self.num_nodes * self.node_feature_dim
         # edge_feat_size = self.num_edges * self.edge_feature_dim
@@ -79,6 +86,7 @@ class CustomGNNExtractor(BaseFeaturesExtractor):
 
         # Global mean pooling over nodes → graph-level feature
         graph_feat = h.mean(dim=0)
-
+        print(graph_feat)
+        # exit()
         # Apply final linear layer and add batch dimension back (SB3 expects (1, features_dim))
         return self.linear(graph_feat).unsqueeze(0)
