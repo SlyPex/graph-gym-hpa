@@ -55,7 +55,7 @@ jobs:
         run: |
           git add .
           if ! git diff --cached --quiet; then
-            git commit -m "chore: lint/format code via CI [ci skip]"
+            git commit -m "chore: lint/format code via CI"
             git push origin ${{ needs.branch.outputs.branch_name }}
           fi
         env:
