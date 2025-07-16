@@ -4,11 +4,12 @@ import os
 from stable_baselines3 import PPO
 from stable_baselines3 import A2C
 from sb3_contrib import RecurrentPPO
-
+import torch
 from gym_hpa.rl_environments.redis import Redis
 from gym_hpa.rl_environments.online_boutique import OnlineBoutique
 from stable_baselines3.common.callbacks import CheckpointCallback
 
+from gym_hpa.gnn.gnn import CustomGNNExtractor
 # Logging
 from policies.util.util import test_model
 
@@ -55,6 +56,18 @@ parser.add_argument("--total_steps", default=5000, help="The total number of ste
 args = parser.parse_args()
 
 
+policy_kwargs = dict(
+    features_extractor_class=CustomGNNExtractor,
+    features_extractor_kwargs=dict(
+        num_nodes=11,
+        node_feature_dim=4,
+        num_edges=15,
+        edge_feature_dim=1,
+        edge_index= torch.tensor([[ 9,  9,  9,  9,  9,  9,  9,  0,  2,  8,  8,  8,  8,  8,  8],
+        [ 0,  1,  2,  8,  6,  5,  3,  1,  7,  2,  4,  5,  6,  1, 10]]) ,  # Must be torch.Tensor of shape (2, num_edges)
+        features_dim=24  # Output feature dimension for SB3 policy
+    )
+)
 def get_model(alg, env, tensorboard_log):
     model = 0
     ## the batch size was fixed at 125 to clean the output , must update later
@@ -66,6 +79,7 @@ def get_model(alg, env, tensorboard_log):
             tensorboard_log=tensorboard_log,
             n_steps=500,
             batch_size=125,
+            policy_kwargs=policy_kwargs, 
         )
     elif alg == "recurrent_ppo":
         model = RecurrentPPO(
@@ -165,7 +179,7 @@ def main():
     checkpoint_callback = CheckpointCallback(
         save_freq=steps, save_path="logs/" + name, name_prefix=name
     )
-
+    
     if training:
         if loading:  # resume training
             model = get_load_model(alg, tensorboard_log, load_path)
@@ -177,11 +191,17 @@ def main():
             )
         else:
             model = get_model(alg, env, tensorboard_log)
+            init_params = {name: param.clone() for name, param in model.policy.features_extractor.named_parameters()}
             model.learn(
-                total_timesteps=total_steps,
+                total_timesteps=50,
                 tb_log_name=name + "_run",
                 callback=checkpoint_callback,
             )
+        for name, param in model.policy.features_extractor.named_parameters():
+            if not torch.equal(param, init_params[name]):
+                print(f"{name}: Parameter updated ✅")
+    else:
+        print(f"{name}: No change ❌")
 
         model.save(name)
 
