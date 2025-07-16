@@ -6,7 +6,6 @@ __pycache__/
 *$py.class
 .python-version
 
-**/__init__.py
 
 # C extensions
 *.so
