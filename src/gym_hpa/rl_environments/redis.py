@@ -25,7 +25,7 @@ from gym_hpa.rl_environments.util import (
 from gym_hpa.paths import DATASET_DIR
 
 csv_path_rd = os.path.join(
-    DATASET_DIR, "onlineboutique", "v1", "redis_gym_observation.csv"
+    DATASET_DIR, "redis", "v1", "redis_gym_observation.csv"
 )
 
 
