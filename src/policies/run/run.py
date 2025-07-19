@@ -5,12 +5,10 @@ from stable_baselines3 import PPO
 from stable_baselines3 import A2C
 from sb3_contrib import RecurrentPPO
 import torch
-import torch
 from gym_hpa.rl_environments.redis import Redis
 from gym_hpa.rl_environments.online_boutique import OnlineBoutique
 from stable_baselines3.common.callbacks import CheckpointCallback
 
-from gym_hpa.gnn.gnn import CustomGNNExtractor
 
 from gym_hpa.gnn.gnn import CustomGNNExtractor
 # Logging
@@ -206,7 +204,7 @@ def main():
             }
             init_params = {name: param.clone() for name, param in model.policy.features_extractor.named_parameters()}
             model.learn(
-                total_timesteps=50,
+                total_timesteps=total_steps,
                 tb_log_name=name + "_run",
                 callback=checkpoint_callback,
             )

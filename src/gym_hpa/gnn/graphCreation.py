@@ -11,7 +11,7 @@ import requests
 import time
 # from gym_hpa.envs.online_boutique import OnlineBoutique
 
-PROMETHEUS_URL = "http://my-prometheus:9090"
+PROMETHEUS_URL = "http://localhost:9090"
 
 NUM_FEATURES_PER_SERVICE = 4  # cpu, ram, num_pods, desired_pods
 service_names = [
@@ -41,7 +41,7 @@ service_dependencies = {
         "adservice",
     ],
     "recommendationservice": ["productcatalogservice"],
-    "cartservice": ["redis-cart"],
+    # "cartservice": ["redis-cart"],
     "checkoutservice": [
         "cartservice",
         "paymentservice",
@@ -312,10 +312,14 @@ def fetch_prom(query, prometheus_url=PROMETHEUS_URL, retry_sleep=5, max_retries=
 
     while retries < max_retries:
         try:
+            print(query)
             response = requests.get(
                 f"{prometheus_url}/api/v1/query", params={"query": query}, timeout=30
             )  # Add timeout
-
+            data = response.json()
+            timestamp, value_str = data['data']['result'][0]["value"]
+            print(query, value_str)
+            # exit()
             # Check if request was successful
             response.raise_for_status()
 
@@ -338,8 +342,8 @@ def fetch_prom(query, prometheus_url=PROMETHEUS_URL, retry_sleep=5, max_retries=
                     print("Max retries reached, returning None")
                     return None
 
-            result = json_data["data"]["result"]
-            return result
+            # result = json_data["data"]["result"]
+            return float(value_str)
 
         except requests.exceptions.RequestException as e:
             print(f"Network error: {e}")
@@ -368,33 +372,33 @@ def _get_traffic_from_prometheus(prometheus_url=PROMETHEUS_URL):
         for source_name, destinations in service_dependencies.items():
             for dest_name in destinations:
                 # Query network traffic between services using Istio metrics
-                query = f'rate(istio_request_total{{source_app="{source_name}",destination_service_name="{dest_name}"}}[5m])'
+                query = f'rate(istio_requests_total{{source_app="{source_name}",destination_service_name="{dest_name}"}}[1m])'
 
                 # Use the fixed fetch_prom function
                 result = fetch_prom(query, prometheus_url)
 
-                if result and len(result) > 0:
-                    try:
-                        # Extract traffic value from Prometheus result
-                        traffic_value = (
-                            float(result[0]["value"][1]) * 1000
-                        )  # Convert to appropriate scale
-                    except (IndexError, KeyError, ValueError) as e:
-                        print(
-                            f"Error parsing result for {source_name}->{dest_name}: {e}"
-                        )
-                        traffic_value = np.random.uniform(10, 80)  # Fallback
-                else:
-                    print(
-                        f"No data found for {source_name}->{dest_name}, using fallback"
-                    )
-                    traffic_value = np.random.uniform(10, 80)  # Fallback
+                # if result and len(result) > 0:
+                #     try:
+                #         # Extract traffic value from Prometheus result
+                #         traffic_value = (
+                #             float(result[0]["value"][1]) * 1000
+                #         )  # Convert to appropriate scale
+                #     except (IndexError, KeyError, ValueError) as e:
+                #         print(
+                #             f"Error parsing result for {source_name}->{dest_name}: {e}"
+                #         )
+                #         traffic_value = np.random.uniform(10, 80)  # Fallback
+                # else:
+                #     print(
+                #         f"No data found for {source_name}->{dest_name}, using fallback"
+                #     )
+                #     traffic_value = np.random.uniform(10, 80)  # Fallback
 
                 traffic_data.append(
                     {
                         "source": source_name,
                         "destination": dest_name,
-                        "traffic": round(traffic_value, 2),
+                        "traffic": round(result, 2),
                     }
                 )
 
@@ -440,11 +444,11 @@ def get_traffic_between_services(
     """
     if method == "prometheus":
         print("Attempting to fetch traffic data from Prometheus...")
+        print("##########################||||||||||||||||||||||||||||||||############")
         return _get_traffic_from_prometheus(prometheus_url)
     else:
         print("Using simulated traffic data...")
         return _get_simulated_traffic(**kwargs)
-
 
 def build_graph_with_sim_traffic(metrics):
     ## to build random traffic data
@@ -459,7 +463,7 @@ def build_graph_with_sim_traffic(metrics):
                 }
             )
     traffic_metrics_df = pd.DataFrame(traffic_metrics_list)
-    return build_graph(metrics, traffic_metrics_df)
+    return build_graph(metrics = metrics, traffic_metrics=traffic_metrics_df)
 
 
 ## add get_real_traffic_df

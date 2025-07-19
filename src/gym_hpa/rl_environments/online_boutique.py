@@ -29,6 +29,7 @@ from gym_hpa.rl_environments.util import (
 
 ##graph creation
 from gym_hpa.gnn.graphCreation import build_graph_with_sim_traffic
+from gym_hpa.gnn.graphCreation import get_traffic_between_services
 from gym_hpa.gnn.graphCreation import graph_to_data
 from gym_hpa.gnn.gnn import CustomGNNExtractor
 from gym_hpa.gnn.gnn import flatten_graph_data
@@ -184,7 +185,7 @@ class OnlineBoutique(gym.Env):
         self.observation_space = Box(
                         low=-np.inf,
                         high=np.inf,
-                        shape=(59,),
+                        shape=(58,),
                         dtype=np.float32
                 )
 
@@ -581,6 +582,13 @@ class OnlineBoutique(gym.Env):
 
         print("2. Building graph with simulation traffic...")
         graph = build_graph_with_sim_traffic(ob)
+        pr = get_traffic_between_services(method="prometheus")
+        print("###############################################################")
+        print("###############################################################")
+        print(pr)
+        print("###############################################################")
+        print("###############################################################")
+        
         print(f"   Graph created: {type(graph)}")
 
         print("3. Converting graph to data format...")
