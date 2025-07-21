@@ -317,7 +317,7 @@ def fetch_prom(query, prometheus_url=PROMETHEUS_URL, retry_sleep=5, max_retries=
                 f"{prometheus_url}/api/v1/query", params={"query": query}, timeout=30
             )  # Add timeout
             data = response.json()
-            timestamp, value_str = data['data']['result'][0]["value"]
+            timestamp, value_str = data["data"]["result"][0]["value"]
             print(query, value_str)
             # exit()
             # Check if request was successful
@@ -450,6 +450,7 @@ def get_traffic_between_services(
         print("Using simulated traffic data...")
         return _get_simulated_traffic(**kwargs)
 
+
 def build_graph_with_sim_traffic(metrics):
     ## to build random traffic data
     traffic_metrics_list = []
@@ -463,7 +464,7 @@ def build_graph_with_sim_traffic(metrics):
                 }
             )
     traffic_metrics_df = pd.DataFrame(traffic_metrics_list)
-    return build_graph(metrics = metrics, traffic_metrics=traffic_metrics_df)
+    return build_graph(metrics=metrics, traffic_metrics=traffic_metrics_df)
 
 
 ## add get_real_traffic_df

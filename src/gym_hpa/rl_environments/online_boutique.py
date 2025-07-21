@@ -8,7 +8,7 @@ import gymnasium as gym
 import numpy as np
 import pandas as pd
 from gymnasium import spaces
-from gymnasium.utils import seeding 
+from gymnasium.utils import seeding
 from gymnasium.spaces import Box
 
 
@@ -183,11 +183,8 @@ class OnlineBoutique(gym.Env):
 
         # self.observation_space = self.get_observation_space()
         self.observation_space = Box(
-                        low=-np.inf,
-                        high=np.inf,
-                        shape=(58,),
-                        dtype=np.float32
-                )
+            low=-np.inf, high=np.inf, shape=(58,), dtype=np.float32
+        )
 
         # Action and Observation Space
         # logging.info("[Init] Action Spaces: " + str(self.action_space))
@@ -588,7 +585,7 @@ class OnlineBoutique(gym.Env):
         print(pr)
         print("###############################################################")
         print("###############################################################")
-        
+
         print(f"   Graph created: {type(graph)}")
 
         print("3. Converting graph to data format...")
@@ -597,7 +594,7 @@ class OnlineBoutique(gym.Env):
         print(data.edge_index)
         print("4. Returning original observation tuple")
         print("=== END GET_STATE ===\n")
-        
+
         data = flatten_graph_data(data)
         print("flattened graph data")
         print(data.shape)
