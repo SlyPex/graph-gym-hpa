@@ -229,16 +229,11 @@ def main():
                 tb_log_name=name + "_run",
                 callback=checkpoint_callback,
             )
-        for name, param in model.policy.features_extractor.named_parameters():
-            if not torch.equal(param, init_params[name]):
-                print(f"{name}: Parameter updated ✅")
-    else:
-        print(f"{name}: No change ❌")
-        for name, param in model.policy.features_extractor.named_parameters():
-            if not torch.equal(param, init_params[name]):
-                print(f"{name}: Parameter updated ✅")
-    else:
-        print(f"{name}: No change ❌")
+    for name, param in model.policy.features_extractor.named_parameters():
+        if not torch.equal(param, init_params[name]):
+            print(f"{name}: Parameter updated ✅")
+        else:
+            print(f"{name}: No change ❌")
 
         model.save(name)
 
