@@ -9,6 +9,10 @@ from gym_hpa.rl_environments.redis import Redis
 from gym_hpa.rl_environments.online_boutique import OnlineBoutique
 from stable_baselines3.common.callbacks import CheckpointCallback
 
+from gym_hpa.gnn.gnn import CustomGNNExtractor
+
+from gym_hpa.gnn.gnn import CustomGNNExtractor
+
 
 from gym_hpa.gnn.gnn import CustomGNNExtractor
 # Logging
@@ -55,6 +59,24 @@ parser.add_argument("--steps", default=500, help="The steps for saving.")
 parser.add_argument("--total_steps", default=5000, help="The total number of steps.")
 
 args = parser.parse_args()
+
+
+policy_kwargs = dict(
+    features_extractor_class=CustomGNNExtractor,
+    features_extractor_kwargs=dict(
+        num_nodes=11,
+        node_feature_dim=4,
+        num_edges=15,
+        edge_feature_dim=1,
+        edge_index=torch.tensor(
+            [
+                [9, 9, 9, 9, 9, 9, 9, 0, 2, 8, 8, 8, 8, 8, 8],
+                [0, 1, 2, 8, 6, 5, 3, 1, 7, 2, 4, 5, 6, 1, 10],
+            ]
+        ),  # Must be torch.Tensor of shape (2, num_edges)
+        features_dim=24,  # Output feature dimension for SB3 policy
+    ),
+)
 
 
 policy_kwargs = dict(
@@ -202,12 +224,16 @@ def main():
                 name: param.clone()
                 for name, param in model.policy.features_extractor.named_parameters()
             }
-            init_params = {name: param.clone() for name, param in model.policy.features_extractor.named_parameters()}
             model.learn(
-                total_timesteps=total_steps,
+                total_timesteps=50,
                 tb_log_name=name + "_run",
                 callback=checkpoint_callback,
             )
+        for name, param in model.policy.features_extractor.named_parameters():
+            if not torch.equal(param, init_params[name]):
+                print(f"{name}: Parameter updated ✅")
+    else:
+        print(f"{name}: No change ❌")
         for name, param in model.policy.features_extractor.named_parameters():
             if not torch.equal(param, init_params[name]):
                 print(f"{name}: Parameter updated ✅")
