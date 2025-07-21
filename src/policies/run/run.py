@@ -11,10 +11,9 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 
 from gym_hpa.gnn.gnn import CustomGNNExtractor
 
-from gym_hpa.gnn.gnn import CustomGNNExtractor
 
 
-from gym_hpa.gnn.gnn import CustomGNNExtractor
+
 # Logging
 from policies.util.util import test_model
 
@@ -208,7 +207,7 @@ def main():
     checkpoint_callback = CheckpointCallback(
         save_freq=steps, save_path="logs/" + name, name_prefix=name
     )
-    
+
     if training:
         if loading:  # resume training
             model = get_load_model(alg, tensorboard_log, load_path)

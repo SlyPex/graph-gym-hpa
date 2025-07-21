@@ -31,7 +31,6 @@ from gym_hpa.rl_environments.util import (
 from gym_hpa.gnn.graphCreation import build_graph_with_sim_traffic
 from gym_hpa.gnn.graphCreation import get_traffic_between_services
 from gym_hpa.gnn.graphCreation import graph_to_data
-from gym_hpa.gnn.gnn import CustomGNNExtractor
 from gym_hpa.gnn.gnn import flatten_graph_data
 
 
