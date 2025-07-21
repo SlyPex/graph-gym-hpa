@@ -169,7 +169,7 @@ def main():
         scenario = "simulated"
 
     tensorboard_log = os.path.join(RESULTS_DIR, use_case, scenario, goal)
-
+    print(tensorboard_log)
     name = (
         alg
         + "_env_"

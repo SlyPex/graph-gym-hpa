@@ -62,7 +62,7 @@ def get_online_boutique_deployment_list(k8s, min, max):
         DeploymentStatus(
             k8s,
             "recommendationservice",
-            "onlineboutique",
+            "default",
             "recommendationservice",
             "quay.io/signalfuse/microservices-demo-recommendationservice:433c23881a",
             max,
@@ -76,7 +76,7 @@ def get_online_boutique_deployment_list(k8s, min, max):
         DeploymentStatus(
             k8s,
             "productcatalogservice",
-            "onlineboutique",
+            "default",
             "productcatalogservice",
             "quay.io/signalfuse/microservices-demo-productcatalogservice:433c23881a",
             max,
@@ -90,7 +90,7 @@ def get_online_boutique_deployment_list(k8s, min, max):
         DeploymentStatus(
             k8s,
             "cartservice",
-            "onlineboutique",
+            "default",
             "cartservice",
             "quay.io/signalfuse/microservices-demo-cartservice:433c23881a",
             max,
@@ -104,7 +104,7 @@ def get_online_boutique_deployment_list(k8s, min, max):
         DeploymentStatus(
             k8s,
             "adservice",
-            "onlineboutique",
+            "default",
             "adservice",
             "quay.io/signalfuse/microservices-demo-adservice:433c23881a",
             max,
@@ -118,7 +118,7 @@ def get_online_boutique_deployment_list(k8s, min, max):
         DeploymentStatus(
             k8s,
             "paymentservice",
-            "onlineboutique",
+            "default",
             "paymentservice",
             "quay.io/signalfuse/microservices-demo-paymentservice:433c23881a",
             max,
@@ -132,7 +132,7 @@ def get_online_boutique_deployment_list(k8s, min, max):
         DeploymentStatus(
             k8s,
             "shippingservice",
-            "onlineboutique",
+            "default",
             "shippingservice",
             "quay.io/signalfuse/microservices-demo-shippingservice:433c23881a",
             max,
@@ -146,7 +146,7 @@ def get_online_boutique_deployment_list(k8s, min, max):
         DeploymentStatus(
             k8s,
             "currencyservice",
-            "onlineboutique",
+            "default",
             "currencyservice",
             "quay.io/signalfuse/microservices-demo-currencyservice:433c23881a",
             max,
@@ -160,7 +160,7 @@ def get_online_boutique_deployment_list(k8s, min, max):
         DeploymentStatus(
             k8s,
             "redis-cart",
-            "onlineboutique",
+            "default",
             "redis-cart",
             "redis:alpine",
             max,
@@ -174,7 +174,7 @@ def get_online_boutique_deployment_list(k8s, min, max):
         DeploymentStatus(
             k8s,
             "checkoutservice",
-            "onlineboutique",
+            "default",
             "checkoutservice",
             "quay.io/signalfuse/microservices-demo-checkoutservice:433c23881a",
             max,
@@ -188,7 +188,7 @@ def get_online_boutique_deployment_list(k8s, min, max):
         DeploymentStatus(
             k8s,
             "frontend",
-            "onlineboutique",
+            "default",
             "frontend",
             "quay.io/signalfuse/microservices-demo-frontend:433c23881a",
             max,
@@ -202,7 +202,7 @@ def get_online_boutique_deployment_list(k8s, min, max):
         DeploymentStatus(
             k8s,
             "emailservice",
-            "onlineboutique",
+            "default",
             "emailservice",
             "quay.io/signalfuse/microservices-demo-frontend:433c23881a",
             max,
