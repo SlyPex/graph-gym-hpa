@@ -224,7 +224,7 @@ def main():
                 for name, param in model.policy.features_extractor.named_parameters()
             }
             model.learn(
-                total_timesteps=50,
+                total_timesteps=total_steps,
                 tb_log_name=name + "_run",
                 callback=checkpoint_callback,
             )
