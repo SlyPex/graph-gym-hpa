@@ -23,6 +23,7 @@ HOST = "http://localhost:8080"
 TOKEN = ""
 
 
+
 def get_redis_deployment_list(k8s, min, max):
     deployment_list = [
         DeploymentStatus(
@@ -358,7 +359,7 @@ class DeploymentStatus:  # Deployment Status (Workload)
         # App. Latency
         self.latency = 0
 
-        if self.k8s:  # Real env: consider a k8s cluster
+        if self.k8s:  # Real env: consider a k8s cluster    
             logging.info("[Deployment] Consider a real k8s cluster ... ")
             # out of cluster!
             # config.load_kube_config()

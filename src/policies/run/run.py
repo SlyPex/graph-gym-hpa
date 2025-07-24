@@ -1,33 +1,45 @@
-import logging
+# Standard Library
 import argparse
+import logging
 import os
-from stable_baselines3 import PPO
-from stable_baselines3 import A2C
-from sb3_contrib import RecurrentPPO
+
+# Libraries
 import torch
+from stable_baselines3 import PPO, A2C
+from sb3_contrib import RecurrentPPO
+from stable_baselines3.common.callbacks import CheckpointCallback
+import random
+import numpy as np
+
+
+# Local
 from gym_hpa.rl_environments.redis import Redis
 from gym_hpa.rl_environments.online_boutique import OnlineBoutique
-from stable_baselines3.common.callbacks import CheckpointCallback
-
 from gym_hpa.gnn.gnn import CustomGNNExtractor
-
+from policies.util.util import test_model
+from gym_hpa.paths import RESULTS_DIR
 
 
 
 # Logging
-from policies.util.util import test_model
-
-
-from gym_hpa.paths import RESULTS_DIR
-
-
-logging.basicConfig(filename="run.log", filemode="w", level=logging.INFO)
-logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
-
-parser = argparse.ArgumentParser(description="Run ILP!")
-parser.add_argument(
-    "--alg", default="ppo", help='The algorithm: ["ppo", "recurrent_ppo", "a2c"]'
+# logger = logging.getLogger(__name__)
+logging.basicConfig(
+    handlers=[
+        logging.FileHandler("runn.log", mode="w"),
+        logging.StreamHandler()  # This will also print to console
+    ],
+    level=logging.INFO,
+    format="%(asctime)s %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p"
 )
+
+
+
+# Parsing arguments
+parser = argparse.ArgumentParser(description="Run ILP!")
+
+parser.add_argument("--alg", choices=["ppo", "recurrent_ppo", "a2c"], default="ppo" , help='The algorithm: ["ppo", "recurrent_ppo", "a2c"]')
+
 parser.add_argument("--k8s", default=False, action="store_true", help="K8s mode")
 parser.add_argument(
     "--use_case", default="redis", help='Apps: ["redis", "online_boutique"]'
@@ -54,101 +66,61 @@ parser.add_argument(
     help="Testing path, ex: logs/model/test.zip",
 )
 
-parser.add_argument("--steps", default=500, help="The steps for saving.")
-parser.add_argument("--total_steps", default=5000, help="The total number of steps.")
-
-args = parser.parse_args()
+parser.add_argument("--steps", type= int ,  default=500, help="The steps for saving.")
+parser.add_argument("--total_steps",type = int , default=5000, help="The total number of steps.")
 
 
-policy_kwargs = dict(
-    features_extractor_class=CustomGNNExtractor,
-    features_extractor_kwargs=dict(
-        num_nodes=11,
-        node_feature_dim=4,
-        num_edges=15,
-        edge_feature_dim=1,
-        edge_index=torch.tensor(
+
+
+def get_policy_kwargs():
+    return dict(
+        features_extractor_class=CustomGNNExtractor,
+        features_extractor_kwargs={
+            "num_nodes": 11,
+            "node_feature_dim": 4,
+            "num_edges": 15,
+            "edge_feature_dim": 1,
+            "edge_index": torch.tensor(
             [
                 [9, 9, 9, 9, 9, 9, 9, 0, 2, 8, 8, 8, 8, 8, 8],
                 [0, 1, 2, 8, 6, 5, 3, 1, 7, 2, 4, 5, 6, 1, 10],
-            ]
-        ),  # Must be torch.Tensor of shape (2, num_edges)
-        features_dim=24,  # Output feature dimension for SB3 policy
-    ),
-)
+            ]),
+            "features_dim": 24,
+        }
+    )
 
 
-policy_kwargs = dict(
-    features_extractor_class=CustomGNNExtractor,
-    features_extractor_kwargs=dict(
-        num_nodes=11,
-        node_feature_dim=4,
-        num_edges=15,
-        edge_feature_dim=1,
-        edge_index=torch.tensor(
-            [
-                [9, 9, 9, 9, 9, 9, 9, 0, 2, 8, 8, 8, 8, 8, 8],
-                [0, 1, 2, 8, 6, 5, 3, 1, 7, 2, 4, 5, 6, 1, 10],
-            ]
-        ),  # Must be torch.Tensor of shape (2, num_edges)
-        features_dim=24,  # Output feature dimension for SB3 policy
-    ),
-)
 
 
-def get_model(alg, env, tensorboard_log):
-    model = 0
+def get_model(alg, env, tensorboard_log , policy_kwargs):
+    common_args = dict(env=env, verbose=1, tensorboard_log=tensorboard_log)
+   
     ## the batch size was fixed at 125 to clean the output , must update later
+    ## n_steps ????
     if alg == "ppo":
-        model = PPO(
-            "MlpPolicy",
-            env,
-            verbose=1,
-            tensorboard_log=tensorboard_log,
-            n_steps=500,
-            batch_size=125,
-            policy_kwargs=policy_kwargs,
-        )
+        return PPO("MlpPolicy", n_steps=500, batch_size=125, policy_kwargs=policy_kwargs, **common_args)
     elif alg == "recurrent_ppo":
-        model = RecurrentPPO(
-            "MlpLstmPolicy", env, verbose=1, tensorboard_log=tensorboard_log
-        )
+        return RecurrentPPO("MlpLstmPolicy", **common_args)
     elif alg == "a2c":
-        model = A2C(
-            "MlpPolicy", env, verbose=1, tensorboard_log=tensorboard_log
-        )  # , n_steps=steps
+        return A2C("MlpPolicy", **common_args)
     else:
-        logging.info("Invalid algorithm!")
-
-    return model
+        raise ValueError(f"Unknown algorithm: {alg}")
 
 
-def get_load_model(alg, tensorboard_log, load_path):
+def get_load_model(alg, tensorboard_log, load_path ):
+    common_args = dict( verbose=1, tensorboard_log=tensorboard_log)
+   
+    ## the batch size was fixed at 125 to clean the output , must update later
+    ## n_steps ????
+    ## change this
     if alg == "ppo":
-        return PPO.load(
-            load_path,
-            reset_num_timesteps=False,
-            verbose=1,
-            tensorboard_log=tensorboard_log,
-            n_steps=500,
-        )
+        return PPO.load(load_path,  **common_args)
     elif alg == "recurrent_ppo":
-        return RecurrentPPO.load(
-            load_path,
-            reset_num_timesteps=False,
-            verbose=1,
-            tensorboard_log=tensorboard_log,
-        )  # n_steps=steps
+        return RecurrentPPO.load(load_path, **common_args)
     elif alg == "a2c":
-        return A2C.load(
-            load_path,
-            reset_num_timesteps=False,
-            verbose=1,
-            tensorboard_log=tensorboard_log,
-        )
+        return A2C.load(load_path, **common_args)
     else:
-        logging.info("Invalid algorithm!")
-
+        raise ValueError(f"Unknown algorithm: {alg}")
 
 def get_env(use_case, k8s, goal):
     env = 0
@@ -162,90 +134,98 @@ def get_env(use_case, k8s, goal):
 
     return env
 
+def get_tensorboard_log_path(use_case, k8s, goal):
+    scenario = "real" if k8s else "simulated"
+    return os.path.join(RESULTS_DIR, use_case, scenario, goal)
 
-def main():
-    # Import and initialize Environment
-    logging.info(args)
+def get_run_name(alg, env_name, goal, k8s, total_steps):
+    return f"{alg}_env_{env_name}_goal_{goal}_k8s_{k8s}_totalSteps_{total_steps}"
 
-    alg = args.alg
-    k8s = args.k8s
-    use_case = args.use_case
-    goal = args.goal
+def train_model(model, total_steps, name, checkpoint_callback):
+    model.learn(
+        total_timesteps=total_steps,
+        tb_log_name=name + "_run",
+        callback=checkpoint_callback,
+        progress_bar=True
+    )
+    model.save(name)
 
-    loading = args.loading
-    load_path = args.load_path
-    training = args.training
-    testing = args.testing
-    test_path = args.test_path
-
-    steps = int(args.steps)
-    total_steps = int(args.total_steps)
-
-    env = get_env(use_case, k8s, goal)
-
-    scenario = ""
-    if k8s:
-        scenario = "real"
+def test_model_wrapper(model, env, name):
+    test_model(
+        model,
+        env,
+        n_episodes=100,
+        n_steps=110,
+        smoothing_window=5,
+        fig_name=name + "_test_reward.png",
+    )
+def get_model_or_load(alg, env, tensorboard_log, loading, load_path, policy_kwargs):
+    if loading:
+        model = get_load_model(alg, tensorboard_log, load_path)
+        model.set_env(env)
+        return model
     else:
-        scenario = "simulated"
+        return get_model(alg, env, tensorboard_log, policy_kwargs)
 
-    tensorboard_log = os.path.join(RESULTS_DIR, use_case, scenario, goal)
-    print(tensorboard_log)
-    name = (
-        alg
-        + "_env_"
-        + env.name
-        + "_goal_"
-        + goal
-        + "_k8s_"
-        + str(k8s)
-        + "_totalSteps_"
-        + str(total_steps)
+def set_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        
+def main():
+    set_seed(42)
+    args = parser.parse_args()
+    logging.info(f"Starting with config: {vars(args)}")
+
+    env = get_env(args.use_case, args.k8s, args.goal)
+    
+    logging.info(f"Using environment: {env.name}")
+
+    tensorboard_log = get_tensorboard_log_path(args.use_case, args.k8s, args.goal)
+    logging.info(f"TensorBoard logs at: {tensorboard_log}")
+
+    run_name = get_run_name(args.alg, env.name, args.goal, args.k8s, args.total_steps)
+    logging.info(f"Run name: {run_name}")
+
+    policy_kwargs = get_policy_kwargs()
+    if args.loading:
+        logging.info(f"Loading model from: {args.load_path}")
+    else:
+        logging.info(f"Creating new model: {args.alg}")
+
+    model = get_model_or_load(
+        args.alg,
+        env,
+        tensorboard_log,
+        args.loading,
+        args.load_path,
+        policy_kwargs
     )
 
-    # callback
     checkpoint_callback = CheckpointCallback(
-        save_freq=steps, save_path="logs/" + name, name_prefix=name
+        save_freq=args.steps,
+        save_path=os.path.join("logs", run_name),
+        name_prefix=run_name
     )
+    print(checkpoint_callback)
+    if args.training:
+        logging.info(f"Training started for {args.total_steps} steps")
 
-    if training:
-        if loading:  # resume training
-            model = get_load_model(alg, tensorboard_log, load_path)
-            model.set_env(env)
-            model.learn(
-                total_timesteps=total_steps,
-                tb_log_name=name + "_run",
-                callback=checkpoint_callback,
-            )
-        else:
-            model = get_model(alg, env, tensorboard_log)
-            init_params = {
-                name: param.clone()
-                for name, param in model.policy.features_extractor.named_parameters()
-            }
-            model.learn(
-                total_timesteps=total_steps,
-                tb_log_name=name + "_run",
-                callback=checkpoint_callback,
-            )
-    for name, param in model.policy.features_extractor.named_parameters():
-        if not torch.equal(param, init_params[name]):
-            print(f"{name}: Parameter updated ✅")
-        else:
-            print(f"{name}: No change ❌")
 
-        model.save(name)
+    if args.training:
+        train_model(model, args.total_steps, run_name, checkpoint_callback)
+        logging.info("Training completed.")
 
-    if testing:
-        model = get_load_model(alg, tensorboard_log, test_path)
-        test_model(
-            model,
-            env,
-            n_episodes=100,
-            n_steps=110,
-            smoothing_window=5,
-            fig_name=name + "_test_reward.png",
-        )
+    if args.testing:
+        logging.info(f"Testing model loaded from: {args.test_path}")
+
+
+    if args.testing:
+        model = get_load_model(args.alg, tensorboard_log, args.test_path)
+
+        logging.info("Testing completed.")
 
 
 if __name__ == "__main__":

@@ -212,15 +212,10 @@ class OnlineBoutique(gym.Env):
 
     # revision here!
     def step(self, action):
-        print(f"\n=== STEP {self.current_step + 1} START ===")
-        print(
-            f"Action received: Deployment={DEPLOYMENTS[action[0]]}, Move={MOVES[action[1]]}"
-        )
+
 
         if self.current_step == 1:
-            print("First step - initializing simulation...")
             if not self.k8s:
-                print("Updating simulation data...")
                 self.simulation_update()
 
             self.time_start = time.time()
@@ -250,7 +245,6 @@ class OnlineBoutique(gym.Env):
             n = ID_email
 
         # Execute one time step within the environment
-        print("Taking action...")
         self.take_action(action[ID_MOVES], n)
 
         # Wait a few seconds if on real k8s cluster
@@ -260,15 +254,12 @@ class OnlineBoutique(gym.Env):
                 and self.constraint_min_pod_replicas is False
                 and self.constraint_max_pod_replicas is False
             ):
-                print(
-                    f"Waiting {self.waiting_period} seconds for action to take effect..."
-                )
+
                 # logging.info('[Step {}] | Waiting {} seconds for enabling action ...'
                 # .format(self.current_step, self.waiting_period))
                 time.sleep(self.waiting_period)  # Wait a few seconds...
 
         # Update observation before reward calculation:
-        print("Updating observations...")
         if self.k8s:  # k8s cluster
             for d in self.deploymentList:
                 d.update_obs_k8s()
@@ -276,7 +267,6 @@ class OnlineBoutique(gym.Env):
             self.simulation_update()
 
         # Get reward
-        print("Calculating reward...")
         reward = self.get_reward
         self.total_reward += reward
 
@@ -295,9 +285,7 @@ class OnlineBoutique(gym.Env):
             )
         )
 
-        print("Getting state observation...")
         ob = self.get_state()
-        print("Saving observation to CSV...")
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # self.save_obs_to_csv(
         #     self.obs_csv, np.array(ob), date, self.deploymentList[0].latency
@@ -325,8 +313,6 @@ class OnlineBoutique(gym.Env):
                 self.execution_time,
             )
 
-        print(f"Step {self.current_step} completed")
-        print(f"=== END STEP {self.current_step} ===\n")
 
         # return ob, reward, self.episode_over, self.info
         return np.array(ob), reward, self.episode_over, self.episode_over, self.info
@@ -342,8 +328,7 @@ class OnlineBoutique(gym.Env):
         -------
         observation (object): the initial observation of the space.
         """
-        print("\n=== ENVIRONMENT RESET ===")
-        print("Resetting environment state...")
+
 
         self.current_step = 0
         self.episode_over = False
@@ -354,18 +339,13 @@ class OnlineBoutique(gym.Env):
         self.constraint_max_pod_replicas = False
         self.constraint_min_pod_replicas = False
 
-        print("Reinitializing deployment list...")
         # Deployment Data
         self.deploymentList = get_online_boutique_deployment_list(
             self.k8s, self.min_pods, self.max_pods
         )
 
-        print("Getting initial state...")
         initial_state = self.get_state()
-        print(
-            f"Environment reset complete - Initial state shape: {np.array(initial_state).shape}"
-        )
-        print("=== END ENVIRONMENT RESET ===\n")
+
 
         return np.array(initial_state), self.info
 
@@ -374,128 +354,99 @@ class OnlineBoutique(gym.Env):
         return
 
     def take_action(self, action, id):
-        print(f"  Taking action: {MOVES[action]} on {DEPLOYMENTS[id]}")
         self.current_step += 1
 
         # Stop if MAX_STEPS
         if self.current_step == MAX_STEPS:
-            print(f"  MAX STEPS ({MAX_STEPS}) achieved, ending episode...")
             # logging.info('[Take Action] MAX STEPS achieved, ending ...')
             self.episode_over = True
 
         # ACTIONS
         if action == ACTION_DO_NOTHING:
-            print("  Action: DO NOTHING")
             # logging.info("[Take Action] SELECTED ACTION: DO NOTHING ...")
             pass
 
         elif action == ACTION_ADD_1_REPLICA:
-            print("  Action: ADD 1 Replica")
             # logging.info("[Take Action] SELECTED ACTION: ADD 1 Replica ...")
             self.deploymentList[id].deploy_pod_replicas(1, self)
 
         elif action == ACTION_ADD_2_REPLICA:
-            print("  Action: ADD 2 Replicas")
             # logging.info("[Take Action] SELECTED ACTION: ADD 2 Replicas ...")
             self.deploymentList[id].deploy_pod_replicas(2, self)
 
         elif action == ACTION_ADD_3_REPLICA:
-            print("  Action: ADD 3 Replicas")
             # logging.info("[Take Action] SELECTED ACTION: ADD 3 Replicas ...")
             self.deploymentList[id].deploy_pod_replicas(3, self)
 
         elif action == ACTION_ADD_4_REPLICA:
-            print("  Action: ADD 4 Replicas")
             # logging.info("[Take Action] SELECTED ACTION: ADD 4 Replicas ...")
             self.deploymentList[id].deploy_pod_replicas(4, self)
 
         elif action == ACTION_ADD_5_REPLICA:
-            print("  Action: ADD 5 Replicas")
             # logging.info("[Take Action] SELECTED ACTION: ADD 5 Replicas ...")
             self.deploymentList[id].deploy_pod_replicas(5, self)
 
         elif action == ACTION_ADD_6_REPLICA:
-            print("  Action: ADD 6 Replicas")
             # logging.info("[Take Action] SELECTED ACTION: ADD 6 Replicas ...")
             self.deploymentList[id].deploy_pod_replicas(6, self)
 
         elif action == ACTION_ADD_7_REPLICA:
-            print("  Action: ADD 7 Replicas")
             # logging.info("[Take Action] SELECTED ACTION: ADD 7 Replicas ...")
             self.deploymentList[id].deploy_pod_replicas(7, self)
 
         elif action == ACTION_TERMINATE_1_REPLICA:
-            print("  Action: TERMINATE 1 Replica")
             # logging.info("[Take Action] SELECTED ACTION: TERMINATE 1 Replica ...")
             self.deploymentList[id].terminate_pod_replicas(1, self)
 
         elif action == ACTION_TERMINATE_2_REPLICA:
-            print("  Action: TERMINATE 2 Replicas")
             # logging.info("[Take Action] SELECTED ACTION: TERMINATE 2 Replicas ...")
             self.deploymentList[id].terminate_pod_replicas(2, self)
 
         elif action == ACTION_TERMINATE_3_REPLICA:
-            print("  Action: TERMINATE 3 Replicas")
             # logging.info("[Take Action] SELECTED ACTION: TERMINATE 3 Replicas ...")
             self.deploymentList[id].terminate_pod_replicas(3, self)
 
         elif action == ACTION_TERMINATE_4_REPLICA:
-            print("  Action: TERMINATE 4 Replicas")
             # logging.info("[Take Action] SELECTED ACTION: TERMINATE 4 Replicas ...")
             self.deploymentList[id].terminate_pod_replicas(4, self)
 
         elif action == ACTION_TERMINATE_5_REPLICA:
-            print("  Action: TERMINATE 5 Replicas")
             # logging.info("[Take Action] SELECTED ACTION: TERMINATE 5 Replicas ...")
             self.deploymentList[id].terminate_pod_replicas(5, self)
 
         elif action == ACTION_TERMINATE_6_REPLICA:
-            print("  Action: TERMINATE 6 Replicas")
             # logging.info("[Take Action] SELECTED ACTION: TERMINATE 6 Replicas ...")
             self.deploymentList[id].terminate_pod_replicas(6, self)
 
         elif action == ACTION_TERMINATE_7_REPLICA:
-            print("  Action: TERMINATE 7 Replicas")
             # logging.info("[Take Action] SELECTED ACTION: TERMINATE 7 Replicas ...")
             self.deploymentList[id].terminate_pod_replicas(7, self)
 
         else:
-            print(f"  Unrecognized Action: {action}")
             logging.info("[Take Action] Unrecognized Action: " + str(action))
 
     @property
     def get_reward(self):
-        """Calculate Rewards"""
-        print("  Calculating reward...")
+
 
         # Reward based on Keyword!
         if self.constraint_max_pod_replicas:
             if self.goal_reward == COST:
-                print("  Constraint violation: MAX pod replicas - penalty applied (-1)")
                 return -1  # penalty
             elif self.goal_reward == LATENCY:
-                print(
-                    "  Constraint violation: MAX pod replicas - penalty applied (-3000)"
-                )
                 return -3000  # penalty
 
         if self.constraint_min_pod_replicas:
             if self.goal_reward == COST:
-                print("  Constraint violation: MIN pod replicas - penalty applied (-1)")
                 return -1  # penalty
             elif self.goal_reward == LATENCY:
-                print(
-                    "  Constraint violation: MIN pod replicas - penalty applied (-3000)"
-                )
                 return -3000  # penalty
 
         # Reward Calculation
         reward = self.calculate_reward()
-        print(f"  Reward calculated: {reward}")
         return reward
 
     def get_state(self):
-        print(f"\n=== GET_STATE - Step {self.current_step} ===")
 
         # Observations: metrics - 3 Metrics!!
         # "number_pods"
@@ -573,30 +524,15 @@ class OnlineBoutique(gym.Env):
             self.deploymentList[ID_email].transmit_traffic,
         )
 
-        print(f"1. Raw observation tuple created (length: {len(ob)})")
-        print(f"   First 6 values: {ob[:6]}")
 
-        print("2. Building graph with simulation traffic...")
         graph = build_graph_with_sim_traffic(ob)
         pr = get_traffic_between_services(method="prometheus")
-        print("###############################################################")
-        print("###############################################################")
-        print(pr)
-        print("###############################################################")
-        print("###############################################################")
 
-        print(f"   Graph created: {type(graph)}")
 
-        print("3. Converting graph to data format...")
+
         data = graph_to_data(graph)
-        print(f"   Data format: {type(data)}")
-        print(data.edge_index)
-        print("4. Returning original observation tuple")
-        print("=== END GET_STATE ===\n")
 
         data = flatten_graph_data(data)
-        print("flattened graph data")
-        print(data.shape)
         # exit()
         ob = data
         return ob
@@ -748,30 +684,22 @@ class OnlineBoutique(gym.Env):
 
     # calculates the desired replica count based on a target metric utilization
     def calculate_reward(self):
-        print(f"  Calculating reward with goal: {self.goal_reward}")
-
         # Calculate Number of desired Replicas
         reward = 0
         if self.goal_reward == COST:
-            print("  Using cost-based reward calculation...")
             reward = get_cost_reward(self.deploymentList)
         elif self.goal_reward == LATENCY:
-            print("  Using latency-based reward calculation...")
             reward = get_latency_reward_online_boutique(
                 ID_recommendation, self.deploymentList
             )
 
-        print(f"  Final reward value: {reward}")
         return reward
 
     def simulation_update(self):
-        print(f"=== SIMULATION_UPDATE - Step {self.current_step} ===")
 
         if self.current_step == 1:
-            print("Getting initial random sample from dataset...")
             # Get a random sample!
             sample = self.df.sample()
-            print(f"Sample shape: {sample.shape}")
             # print(sample)
 
             for i in range(len(DEPLOYMENTS)):
@@ -781,10 +709,8 @@ class OnlineBoutique(gym.Env):
                 self.deploymentList[i].num_previous_pods = int(
                     sample[DEPLOYMENTS[i] + "_num_pods"].values[0]
                 )
-                print(f"  {DEPLOYMENTS[i]}: pods={self.deploymentList[i].num_pods}")
 
         else:
-            print("Calculating pod differences and finding matching data...")
             pods = []
             previous_pods = []
             diff = []
@@ -797,9 +723,6 @@ class OnlineBoutique(gym.Env):
                     DEPLOYMENTS[i] + "_num_pods"
                 ].diff()
 
-            print(f"  Current pods: {pods}")
-            print(f"  Previous pods: {previous_pods}")
-            print(f"  Differences: {diff}")
             # print(self.df_aggr)
 
             data = 0
@@ -810,10 +733,8 @@ class OnlineBoutique(gym.Env):
                     data = self.df.loc[self.df[DEPLOYMENTS[i] + "_num_pods"] == pods[i]]
 
             sample = data.sample()
-            print(f"Found matching sample: {sample.shape}")
             # print(sample)
 
-        print("Updating deployment metrics from sample...")
         for i in range(len(DEPLOYMENTS)):
             self.deploymentList[i].cpu_usage = int(
                 sample[DEPLOYMENTS[i] + "_cpu_usage"].values[0]
@@ -830,16 +751,12 @@ class OnlineBoutique(gym.Env):
             self.deploymentList[i].latency = float(
                 "{:.3f}".format(sample[DEPLOYMENTS[i] + "_latency"].values[0])
             )
-            print(
-                f"  {DEPLOYMENTS[i]}: CPU={self.deploymentList[i].cpu_usage}, MEM={self.deploymentList[i].mem_usage}, Latency={self.deploymentList[i].latency}"
-            )
 
-        print("Updating replicas for all deployments...")
+
         for d in self.deploymentList:
             # Update Desired replicas
             d.update_replicas()
 
-        print("=== END SIMULATION_UPDATE ===")
         return
 
     def save_obs_to_csv(self, obs_file, obs, date, latency):

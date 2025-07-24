@@ -312,13 +312,11 @@ def fetch_prom(query, prometheus_url=PROMETHEUS_URL, retry_sleep=5, max_retries=
 
     while retries < max_retries:
         try:
-            print(query)
             response = requests.get(
                 f"{prometheus_url}/api/v1/query", params={"query": query}, timeout=30
             )  # Add timeout
             data = response.json()
             timestamp, value_str = data["data"]["result"][0]["value"]
-            print(query, value_str)
             # exit()
             # Check if request was successful
             response.raise_for_status()
@@ -328,37 +326,29 @@ def fetch_prom(query, prometheus_url=PROMETHEUS_URL, retry_sleep=5, max_retries=
 
             if json_data.get("status") != "success":
                 error_msg = json_data.get("error", "Unknown error")
-                print(f"Prometheus query failed: {error_msg}")
-                print(f"Query: {query}")
+
 
                 retries += 1
                 if retries < max_retries:
-                    print(
-                        f"Retrying in {retry_sleep}s... (attempt {retries}/{max_retries})"
-                    )
+
                     time.sleep(retry_sleep)
                     continue
                 else:
-                    print("Max retries reached, returning None")
                     return None
 
             # result = json_data["data"]["result"]
             return float(value_str)
 
         except requests.exceptions.RequestException as e:
-            print(f"Network error: {e}")
             retries += 1
             if retries < max_retries:
-                print(
-                    f"Retrying in {retry_sleep}s... (attempt {retries}/{max_retries})"
-                )
+
                 time.sleep(retry_sleep)
             else:
-                print("Max retries reached, returning None")
+
                 return None
 
         except (ValueError, KeyError) as e:
-            print(f"Error parsing Prometheus response: {e}")
             return None
 
     return None
@@ -405,7 +395,6 @@ def _get_traffic_from_prometheus(prometheus_url=PROMETHEUS_URL):
         return pd.DataFrame(traffic_data)
 
     except Exception as e:
-        print(f"Error querying Prometheus: {e}")
         return _get_simulated_traffic()
 
 
@@ -443,11 +432,9 @@ def get_traffic_between_services(
         pandas.DataFrame: Traffic data
     """
     if method == "prometheus":
-        print("Attempting to fetch traffic data from Prometheus...")
-        print("##########################||||||||||||||||||||||||||||||||############")
+
         return _get_traffic_from_prometheus(prometheus_url)
     else:
-        print("Using simulated traffic data...")
         return _get_simulated_traffic(**kwargs)
 
 
