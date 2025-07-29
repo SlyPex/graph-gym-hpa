@@ -61,7 +61,7 @@ class CustomGNNExtractor(BaseFeaturesExtractor):
         Returns:
             features: Tensor of shape (1, features_dim)
         """
-
+        # print("doing the forward ")
         # Remove batch dimension to simplify (input is (1, obs_dim), take the first element)
         observations = observations[0]
         # Split the flat observation into node and edge features

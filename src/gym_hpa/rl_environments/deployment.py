@@ -3,7 +3,7 @@ import math
 import random
 import time
 import requests
-from kubernetes import client
+from kubernetes import client , config
 
 # Constants
 MAX_CPU = 10000  # cpu in m
@@ -407,8 +407,14 @@ class DeploymentStatus:  # Deployment Status (Workload)
     def update_obs_k8s(self):
         self.pod_names = []
         pods = self.v1.list_namespaced_pod(namespace=self.namespace)
+        # print(pods.metadata.labels["app"] )
         for p in pods.items:
-            if p.metadata.labels["app"] == self.name:
+            # print("err________________________________________________")
+            # print("P==========================" , p , sep="\n")
+            # print("METADATA___________________________= ",p.metadata.labels , sep="\n")
+            app_label = p.metadata.labels.get("app")
+            # print(app_label)      
+            if app_label == self.name :
                 self.pod_names.append(p.metadata.name)
 
         self.cpu_usage = 0
