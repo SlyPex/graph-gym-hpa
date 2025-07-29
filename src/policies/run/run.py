@@ -11,11 +11,10 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 import random
 import numpy as np
 
-
 # Local
 from gym_hpa.rl_environments.redis import Redis
 from gym_hpa.rl_environments.online_boutique import OnlineBoutique
-from gym_hpa.gnn.gnn import CustomGNNExtractor
+from gym_hpa.gnn.gnn_n import CustomGNNExtractor
 from policies.util.util import test_model
 from gym_hpa.paths import RESULTS_DIR
 
@@ -30,7 +29,7 @@ logging.basicConfig(
     ],
     level=logging.INFO,
     format="%(asctime)s %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p"
+    datefmt="%m/%d/%Y %I:%M:%S %p" 
 )
 
 
@@ -78,13 +77,12 @@ def get_policy_kwargs():
         features_extractor_kwargs={
             "num_nodes": 11,
             "node_feature_dim": 4,
-            "num_edges": 15,
+            "num_edges": 14,
             "edge_feature_dim": 1,
-            "edge_index": torch.tensor(
-            [
-                [9, 9, 9, 9, 9, 9, 9, 0, 2, 8, 8, 8, 8, 8, 8],
-                [0, 1, 2, 8, 6, 5, 3, 1, 7, 2, 4, 5, 6, 1, 10],
-            ]),
+            "edge_index": torch.tensor([
+                [ 9,  9,  9,  9,  9,  9,  9,  0,  8,  8,  8,  8,  8,  8],
+                [ 0,  1,  2,  8,  6,  5,  3,  1,  2,  4,  5,  6,  1, 10]
+                ]),
             "features_dim": 24,
         }
     )
@@ -209,12 +207,14 @@ def main():
         save_path=os.path.join("logs", run_name),
         name_prefix=run_name
     )
-    print(checkpoint_callback)
+    # print(checkpoint_callback)
     if args.training:
         logging.info(f"Training started for {args.total_steps} steps")
 
 
     if args.training:
+        logging.info("Training here.")
+        
         train_model(model, args.total_steps, run_name, checkpoint_callback)
         logging.info("Training completed.")
 
