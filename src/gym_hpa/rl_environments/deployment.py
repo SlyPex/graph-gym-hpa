@@ -4,7 +4,7 @@ import random
 import time
 import requests
 from kubernetes import client , config
-
+import numpy as np
 # Constants
 MAX_CPU = 10000  # cpu in m
 MAX_MEM = 10000  # memory in MiB
@@ -14,7 +14,7 @@ CPU_WEIGHT = 0.7
 MEM_WEIGHT = 0.3
 
 # port-forward in k8s cluster
-PROMETHEUS_URL = "http://localhost:9090/"
+PROMETHEUS_URL = "http://localhost:31090/"
 
 # Endpoint of your Kube cluster: kube proxy enabled
 HOST = "http://localhost:8080"
@@ -259,7 +259,31 @@ def convert_to_mega_memory(value):
 
     return new_value
 
+def parse_cpu(cpu_str: str) -> float:
+    """Convert Kubernetes CPU string (e.g. '500m', '2') to millicores."""
+    if cpu_str.endswith("m"):
+        return float(cpu_str[:-1])  # already in millicores
+    return float(cpu_str) * 1000   # assume in cores → convert to millicores
 
+
+def parse_memory(mem_str: str) -> float:
+    """Convert Kubernetes memory string (e.g. '512Mi', '2Gi') to Mi."""
+    mem_str = mem_str.lower()
+    if mem_str.endswith("ki"):
+        return float(mem_str[:-2]) / 1024
+    elif mem_str.endswith("mi"):
+        return float(mem_str[:-2])
+    elif mem_str.endswith("gi"):
+        return float(mem_str[:-2]) * 1024
+    elif mem_str.endswith("ti"):
+        return float(mem_str[:-2]) * 1024 * 1024
+    elif mem_str.endswith("pi"):
+        return float(mem_str[:-2]) * 1024 * 1024 * 1024
+    elif mem_str.endswith("ei"):
+        return float(mem_str[:-2]) * 1024 * 1024 * 1024 * 1024
+    else:
+        # bytes → convert to Mi
+        return float(mem_str) / (1024 * 1024)
 class DeploymentStatus:  # Deployment Status (Workload)
     def __init__(
         self,
@@ -358,7 +382,8 @@ class DeploymentStatus:  # Deployment Status (Workload)
 
         # App. Latency
         self.latency = 0
-
+        
+        self.obs = None
         if self.k8s:  # Real env: consider a k8s cluster    
             logging.info("[Deployment] Consider a real k8s cluster ... ")
             # out of cluster!
@@ -392,7 +417,11 @@ class DeploymentStatus:  # Deployment Status (Workload)
             self.deployment_object = self.apps_v1.read_namespaced_deployment(
                 name=self.name, namespace=self.namespace
             )
-
+                # Get the initial replica count and store it
+            initial_deployment = self.apps_v1.read_namespaced_deployment(
+                name=self.name, namespace=self.namespace
+            )
+            self.num_previous_pods = initial_deployment.spec.replicas
             # Update number of Pods
             self.num_pods = self.deployment_object.spec.replicas
             self.num_previous_pods = self.deployment_object.spec.replicas
@@ -402,165 +431,150 @@ class DeploymentStatus:  # Deployment Status (Workload)
 
         # else: # Simulation Environment
         # Update Desired replicas
-        # self.update_replicas()
 
-    def update_obs_k8s(self):
-        self.pod_names = []
-        pods = self.v1.list_namespaced_pod(namespace=self.namespace)
-        # print(pods.metadata.labels["app"] )
-        for p in pods.items:
-            # print("err________________________________________________")
-            # print("P==========================" , p , sep="\n")
-            # print("METADATA___________________________= ",p.metadata.labels , sep="\n")
-            app_label = p.metadata.labels.get("app")
-            # print(app_label)      
-            if app_label == self.name :
-                self.pod_names.append(p.metadata.name)
 
-        self.cpu_usage = 0
-        self.mem_usage = 0
-        self.received_traffic = 0
-        self.transmit_traffic = 0
+    def get_resource_limits(self):
+        """
+        Fetch CPU & memory limits for this deployment via the K8s API.
+        Returns:
+            (cpu_limit, mem_limit, total_cpu_limit, total_mem_limit)
+            - cpu_limit, mem_limit: limits for the main app container only
+            - total_cpu_limit, total_mem_limit: sum of all container limits in the pod (including sidecars)
+        """
+        cpu_limit = None
+        mem_limit = None
+        total_cpu_limit = 0
+        total_mem_limit = 0
 
-        # Previous number of Pods
-        self.num_previous_pods = self.deployment_object.spec.replicas
-
-        # Get deployment object
-        self.deployment_object = self.apps_v1.read_namespaced_deployment(
+        deployment = self.apps_v1.read_namespaced_deployment(
             name=self.name, namespace=self.namespace
         )
 
-        # Update number of Pods
-        self.num_pods = self.deployment_object.spec.replicas
+        for container in deployment.spec.template.spec.containers:
+            limits = container.resources.limits or {}
 
-        # logging.info("[Update obs] Current Pods: " + str(self.num_pods))
+            # App-only: pick the one matching the deployment name
+            if container.name == self.name:
+                if "cpu" in limits:
+                    cpu_limit = parse_cpu(limits["cpu"])
+                if "memory" in limits:
+                    mem_limit = parse_memory(limits["memory"])
 
-        # Get received / transmit traffic
-        for p in self.pod_names:
-            query_cpu = (
-                "sum(irate(container_cpu_usage_seconds_total{namespace="
-                '"' + self.namespace + '", pod="' + p + '"}[5m])) by (pod)'
+            # Total: sum all containers
+            if "cpu" in limits:
+                total_cpu_limit += parse_cpu(limits["cpu"])
+            if "memory" in limits:
+                total_mem_limit += parse_memory(limits["memory"])
+
+        return total_cpu_limit or None, total_mem_limit or None
+
+
+
+    def update_obs_k8s(self):
+        """
+        Observes the current state (pods, CPU/Mem ratios) and calculates the
+        desired replica count in a single pass.
+        """
+        try:
+            self.deployment_object = self.apps_v1.read_namespaced_deployment(
+                name=self.name, namespace=self.namespace
             )
-
-            query_mem = (
-                "sum(irate(container_memory_working_set_bytes{namespace="
-                '"' + self.namespace + '", pod="' + p + '"}[5m])) by (pod)'
+            pods = self.v1.list_namespaced_pod(
+                namespace=self.namespace, label_selector=f"app={self.name}"
             )
+            self.pod_names = [p.metadata.name for p in pods.items if p.status.phase == "Running"]
+            self.num_pods = len(self.pod_names)
+        except Exception as e:
+            print(f"Error fetching Kubernetes data for '{self.name}': {e}")
+            return self.obs # Return last known observation on failure
 
-            query_received = (
-                "sum(irate(container_network_receive_bytes_total{namespace="
-                '"' + self.namespace + '", pod="' + p + '"}[5m])) by (pod)'
-            )
-            query_transmit = (
-                'sum(irate(container_network_transmit_bytes_total{namespace="'
-                + self.namespace
-                + '", pod="'
-                + p
-                + '"}[5m])) by (pod)'
-            )
+        # Collect container-level resource limits
+        container_limits = {}
+        for container in self.deployment_object.spec.template.spec.containers:
+            cpu_lim = parse_cpu(container.resources.limits.get("cpu"))
+            mem_lim = parse_memory(container.resources.limits.get("memory"))
+            container_limits[container.name] = {"cpu": cpu_lim, "mem": mem_lim}
 
-            # -------------- CPU ----------------
-            results_cpu = self.fetch_prom(query_cpu)
-            if results_cpu:
-                cpu = int(float(results_cpu[0]["value"][1]) * 1000)  # saved as m
-                self.cpu_usage += cpu
+        # Collect container-level usage and compute ratios from Prometheus
+        cpu_ratios = []
+        mem_ratios = []
+        for pod in self.pod_names:
+            for container_name, limits in container_limits.items():
+                if limits["cpu"] > 0:
+                    query_cpu = f'sum(irate(container_cpu_usage_seconds_total{{namespace="{self.namespace}", pod="{pod}", container="{container_name}"}}[2m]))'
+                    results_cpu = self.fetch_prom(query_cpu)
+                    if results_cpu:
+                        cpu_usage_millicores = float(results_cpu[0]["value"][1]) * 1000
+                        cpu_ratios.append(cpu_usage_millicores / limits["cpu"])
 
-            # -------------- MEM ----------------
-            results_mem = self.fetch_prom(query_mem)
-            if results_mem:
-                mem = int(float(results_mem[0]["value"][1]) / 1000000)  # saved as Mi
-                self.mem_usage += mem
+                if limits["mem"] > 0:
+                    query_mem = f'sum(container_memory_working_set_bytes{{namespace="{self.namespace}", pod="{pod}", container="{container_name}"}})'
+                    results_mem = self.fetch_prom(query_mem)
+                    if results_mem:
+                        mem_usage_mib = float(results_mem[0]["value"][1]) / (1024 * 1024)
+                        mem_ratios.append(mem_usage_mib / limits["mem"])
 
-            # -------------- Received Traffic  ----------------
-            results_received = self.fetch_prom(query_received)
-            if results_received:
-                rec = int(float(results_received[0]["value"][1]))
-                rec = int(rec / 1000)  # saved as KBit/s
-                self.received_traffic += rec
+        # Average and clamp the utilization ratios
+        self.cpu_ratio = min(max(np.mean(cpu_ratios) if cpu_ratios else 0, 0.0), 1.0)
+        self.mem_ratio = min(max(np.mean(mem_ratios) if mem_ratios else 0, 0.0), 1.0)
 
-            # -------------- Transmit Traffic  ----------------
-            results_transmit = self.fetch_prom(query_transmit)
-            if results_transmit:
-                trans = int(float(results_transmit[0]["value"][1]))
-                trans = int(trans / 1000)  # saved as KBit/s
-                self.transmit_traffic += trans
-
-            if self.name == "redis-leader":
-                query_duration = "sum(irate(redis_commands_duration_seconds_total[5m]))"
-                query_processed = "sum(irate(redis_commands_processed_total[5m]))"
-                redis_duration = 0
-                redis_processed = 0
-
-                results_duration = self.fetch_prom(query_duration)
-                if results_duration:
-                    dur = float(results_duration[0]["value"][1])
-                    dur = dur * 1000  # saved as ms
-                    redis_duration = float("{:.3f}".format(dur))
-                # logging.info("[Deployment] redis duration (in ms): " + str(self.redis_duration))
-
-                results_processed = self.fetch_prom(query_processed)
-                if results_processed:
-                    proc = float(results_processed[0]["value"][1])
-                    redis_processed = float("{:.3f}".format(proc))
-                # logging.info("[Deployment] redis processed: " + str(self.redis_processed))
-
-                if redis_processed != 0:
-                    redis_latency = redis_duration / redis_processed
-                else:
-                    redis_latency = redis_duration
-
-                self.latency = float("{:.3f}".format(redis_latency))
-                # logging.info("[Deployment] redis latency (in ms): " + str(self.redis_latency))
-
-            if self.name == "recommendationservice":
-                query_get_cart = (
-                    'locust_requests_avg_response_time{method="GET", name="/cart"}'
-                )
-                get_cart = 0
-
-                results_get_cart = self.fetch_prom(query_get_cart)
-                if results_get_cart:
-                    dur = float(results_get_cart[0]["value"][1])
-                    get_cart = float("{:.3f}".format(dur))
-                    # logging.info("[Deployment] get cart (in ms): " + str(get_cart))
-
-                # self.latency = float("{:.3f}".format((get_cart + post_cart + post_cart_checkout) / 3))
-                self.latency = float("{:.3f}".format(get_cart))
-                # logging.info("[Deployment] Online Bout. Latency (in ms): " + str(self.latency))
-
-        # Update Desired replicas
+        # Calculate the desired number of replicas based on the new ratios
         self.update_replicas()
 
-        return
+        # Create the final observation array based on CURRENT and DESIRED state
+        current_pod_ratio = self.num_pods / self.max_pods if self.max_pods > 0 else 0.0
+        desired_pod_ratio = self.desired_replicas / self.max_pods if self.max_pods > 0 else 0.0
+        self.obs = np.array([self.cpu_ratio, self.mem_ratio, current_pod_ratio, desired_pod_ratio], dtype=np.float32)
+
+        # Debug print
+        # print(f"[Deployment: {self.name}] Pods={self.num_pods}, Desired={self.desired_replicas}")
+        # print(f"  CPU Ratio={self.cpu_ratio:.2f}, Mem Ratio={self.mem_ratio:.2f} -> OBS={self.obs}")
+
+        return self.obs
+
+
+
+
+
+
 
     def update_replicas(self):
-        cpu_target_usage = self.num_pods * self.cpu_target
-        mem_target_usage = self.num_pods * self.mem_target
+        """
+        Calculates the desired number of replicas based on the current average
+        resource utilization ratio versus a target utilization ratio.
+        """
+        # Ensure target values are not zero to avoid division errors
+        if not hasattr(self, 'cpu_target') or self.cpu_target <= 0:
+            self.cpu_target = 0.8  # Default to 80% if not set
 
+        if not hasattr(self, 'mem_target') or self.mem_target <= 0:
+            self.mem_target = 0.8  # Default to 80% if not set
+
+        # Calculate desired replicas for each metric based on target utilization
+        # Formula: desired = current * ( current_ratio / target_ratio )
         desired_replicas_cpu = math.ceil(
-            self.num_pods * (self.cpu_usage / cpu_target_usage)
+            self.num_pods * (self.cpu_ratio / self.cpu_target)
         )
         desired_replicas_mem = math.ceil(
-            self.num_pods * (self.mem_usage / mem_target_usage)
+            self.num_pods * (self.mem_ratio / self.mem_target)
         )
 
-        # CPU and Memory
-        # CPU = 0.7
-        # MEM = 0.3
-        self.desired_replicas = math.ceil(
-            (self.cpu_weight * desired_replicas_cpu)
-            + (self.mem_weight * desired_replicas_mem)
-        )
+        # In HPA logic, you typically scale up based on whichever metric needs it most.
+        # Taking the maximum is a common and effective strategy.
+        self.desired_replicas = max(desired_replicas_cpu, desired_replicas_mem)
 
-        # min = 1
-        if self.desired_replicas == 0:
-            self.desired_replicas = 1
+        # --- Clamping the result to min/max boundaries ---
 
-        # max = should be equal to the maximum
-        if self.desired_replicas > self.max_pods:
+        # Ensure a minimum of 1 replica (or self.min_pods if defined)
+        min_pods = getattr(self, 'min_pods', 1)
+        if self.desired_replicas < min_pods:
+            self.desired_replicas = min_pods
+
+        # Ensure the number of replicas does not exceed the maximum
+        if hasattr(self, 'max_pods') and self.desired_replicas > self.max_pods:
             self.desired_replicas = self.max_pods
 
-        return
+        return self.desired_replicas
 
     def fetch_prom(self, query):
         try:

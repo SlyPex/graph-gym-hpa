@@ -28,7 +28,7 @@ from gym_hpa.rl_environments.util import (
 
 
 ##graph creation
-from gym_hpa.gnn.graphCreation import build_graph_with_sim_traffic
+from gym_hpa.gnn.graphCreation import build_graph
 from gym_hpa.gnn.graphCreation import get_traffic_between_services
 from gym_hpa.gnn.graphCreation import graph_to_data
 from gym_hpa.gnn.gnn import flatten_graph_data
@@ -445,97 +445,120 @@ class OnlineBoutique(gym.Env):
         # Reward Calculation
         reward = self.calculate_reward()
         return reward
-
     def get_state(self):
+        # Step 1: Build metrics dict from DeploymentStatus obs
+        metrics_dict = {}
+        for deployment in self.deploymentList:
+            # Each deployment has self.obs = [cpu_ratio, mem_ratio, pod_ratio, desired_ratio]
+            if deployment.obs is None:
+                # Make sure k8s metrics are fetched
+                deployment.update_obs_k8s()
+            metrics_dict[deployment.name] = {
+                "cpu_ratio": deployment.obs[0],
+                "mem_ratio": deployment.obs[1],
+                "pod_count": deployment.obs[2],
+                "desired_pod_count": deployment.obs[3],
+            }
 
-        # Observations: metrics - 3 Metrics!!
-        # "number_pods"
-        # "cpu"
-        # "mem"
-        # "requests"
+        # Step 2: Get traffic between services from Prometheus
+        pr = get_traffic_between_services()  # Must now only fetch real traffic
 
-        # Return ob
-        ob = (
-            self.deploymentList[ID_recommendation].num_pods,
-            self.deploymentList[ID_recommendation].desired_replicas,
-            self.deploymentList[ID_recommendation].cpu_usage,
-            self.deploymentList[ID_recommendation].mem_usage,
-            self.deploymentList[ID_recommendation].received_traffic,
-            self.deploymentList[ID_recommendation].transmit_traffic,
-            self.deploymentList[ID_product_catalog].num_pods,
-            self.deploymentList[ID_product_catalog].desired_replicas,
-            self.deploymentList[ID_product_catalog].cpu_usage,
-            self.deploymentList[ID_product_catalog].mem_usage,
-            self.deploymentList[ID_product_catalog].received_traffic,
-            self.deploymentList[ID_product_catalog].transmit_traffic,
-            self.deploymentList[ID_cart_service].num_pods,
-            self.deploymentList[ID_cart_service].desired_replicas,
-            self.deploymentList[ID_cart_service].cpu_usage,
-            self.deploymentList[ID_cart_service].mem_usage,
-            self.deploymentList[ID_cart_service].received_traffic,
-            self.deploymentList[ID_cart_service].transmit_traffic,
-            self.deploymentList[ID_ad_service].num_pods,
-            self.deploymentList[ID_ad_service].desired_replicas,
-            self.deploymentList[ID_ad_service].cpu_usage,
-            self.deploymentList[ID_ad_service].mem_usage,
-            self.deploymentList[ID_ad_service].received_traffic,
-            self.deploymentList[ID_ad_service].transmit_traffic,
-            self.deploymentList[ID_payment_service].num_pods,
-            self.deploymentList[ID_payment_service].desired_replicas,
-            self.deploymentList[ID_payment_service].cpu_usage,
-            self.deploymentList[ID_payment_service].mem_usage,
-            self.deploymentList[ID_payment_service].received_traffic,
-            self.deploymentList[ID_payment_service].transmit_traffic,
-            self.deploymentList[ID_shipping_service].num_pods,
-            self.deploymentList[ID_shipping_service].desired_replicas,
-            self.deploymentList[ID_shipping_service].cpu_usage,
-            self.deploymentList[ID_shipping_service].mem_usage,
-            self.deploymentList[ID_shipping_service].received_traffic,
-            self.deploymentList[ID_shipping_service].transmit_traffic,
-            self.deploymentList[ID_currency_service].num_pods,
-            self.deploymentList[ID_currency_service].desired_replicas,
-            self.deploymentList[ID_currency_service].cpu_usage,
-            self.deploymentList[ID_currency_service].mem_usage,
-            self.deploymentList[ID_currency_service].received_traffic,
-            self.deploymentList[ID_currency_service].transmit_traffic,
-            self.deploymentList[ID_redis_cart].num_pods,
-            self.deploymentList[ID_redis_cart].desired_replicas,
-            self.deploymentList[ID_redis_cart].cpu_usage,
-            self.deploymentList[ID_redis_cart].mem_usage,
-            self.deploymentList[ID_redis_cart].received_traffic,
-            self.deploymentList[ID_redis_cart].transmit_traffic,
-            self.deploymentList[ID_checkout_service].num_pods,
-            self.deploymentList[ID_checkout_service].desired_replicas,
-            self.deploymentList[ID_checkout_service].cpu_usage,
-            self.deploymentList[ID_checkout_service].mem_usage,
-            self.deploymentList[ID_checkout_service].received_traffic,
-            self.deploymentList[ID_checkout_service].transmit_traffic,
-            self.deploymentList[ID_frontend].num_pods,
-            self.deploymentList[ID_frontend].desired_replicas,
-            self.deploymentList[ID_frontend].cpu_usage,
-            self.deploymentList[ID_frontend].mem_usage,
-            self.deploymentList[ID_frontend].received_traffic,
-            self.deploymentList[ID_frontend].transmit_traffic,
-            self.deploymentList[ID_email].num_pods,
-            self.deploymentList[ID_email].desired_replicas,
-            self.deploymentList[ID_email].cpu_usage,
-            self.deploymentList[ID_email].mem_usage,
-            self.deploymentList[ID_email].received_traffic,
-            self.deploymentList[ID_email].transmit_traffic,
-        )
+        # Step 3: Build graph
+        graph = build_graph(metrics_dict, pr)
 
-
-        graph = build_graph_with_sim_traffic(ob)
-        pr = get_traffic_between_services(method="prometheus")
-
-
-
+        # Step 4: Convert graph to PyG Data
         data = graph_to_data(graph)
 
-        data = flatten_graph_data(data)
-        # exit()
-        ob = data
-        return ob
+        # Step 5: Flatten graph for RL input
+        flattened_data = flatten_graph_data(data)
+
+        return flattened_data
+
+    # # def get_state(self):
+
+
+    #     ob = (
+    #         self.deploymentList[ID_recommendation].num_pods,
+    #         self.deploymentList[ID_recommendation].desired_replicas,
+    #         self.deploymentList[ID_recommendation].cpu_usage,
+    #         self.deploymentList[ID_recommendation].mem_usage,
+    #         self.deploymentList[ID_recommendation].received_traffic,
+    #         self.deploymentList[ID_recommendation].transmit_traffic,
+    #         self.deploymentList[ID_product_catalog].num_pods,
+    #         self.deploymentList[ID_product_catalog].desired_replicas,
+    #         self.deploymentList[ID_product_catalog].cpu_usage,
+    #         self.deploymentList[ID_product_catalog].mem_usage,
+    #         self.deploymentList[ID_product_catalog].received_traffic,
+    #         self.deploymentList[ID_product_catalog].transmit_traffic,
+    #         self.deploymentList[ID_cart_service].num_pods,
+    #         self.deploymentList[ID_cart_service].desired_replicas,
+    #         self.deploymentList[ID_cart_service].cpu_usage,
+    #         self.deploymentList[ID_cart_service].mem_usage,
+    #         self.deploymentList[ID_cart_service].received_traffic,
+    #         self.deploymentList[ID_cart_service].transmit_traffic,
+    #         self.deploymentList[ID_ad_service].num_pods,
+    #         self.deploymentList[ID_ad_service].desired_replicas,
+    #         self.deploymentList[ID_ad_service].cpu_usage,
+    #         self.deploymentList[ID_ad_service].mem_usage,
+    #         self.deploymentList[ID_ad_service].received_traffic,
+    #         self.deploymentList[ID_ad_service].transmit_traffic,
+    #         self.deploymentList[ID_payment_service].num_pods,
+    #         self.deploymentList[ID_payment_service].desired_replicas,
+    #         self.deploymentList[ID_payment_service].cpu_usage,
+    #         self.deploymentList[ID_payment_service].mem_usage,
+    #         self.deploymentList[ID_payment_service].received_traffic,
+    #         self.deploymentList[ID_payment_service].transmit_traffic,
+    #         self.deploymentList[ID_shipping_service].num_pods,
+    #         self.deploymentList[ID_shipping_service].desired_replicas,
+    #         self.deploymentList[ID_shipping_service].cpu_usage,
+    #         self.deploymentList[ID_shipping_service].mem_usage,
+    #         self.deploymentList[ID_shipping_service].received_traffic,
+    #         self.deploymentList[ID_shipping_service].transmit_traffic,
+    #         self.deploymentList[ID_currency_service].num_pods,
+    #         self.deploymentList[ID_currency_service].desired_replicas,
+    #         self.deploymentList[ID_currency_service].cpu_usage,
+    #         self.deploymentList[ID_currency_service].mem_usage,
+    #         self.deploymentList[ID_currency_service].received_traffic,
+    #         self.deploymentList[ID_currency_service].transmit_traffic,
+    #         self.deploymentList[ID_redis_cart].num_pods,
+    #         self.deploymentList[ID_redis_cart].desired_replicas,
+    #         self.deploymentList[ID_redis_cart].cpu_usage,
+    #         self.deploymentList[ID_redis_cart].mem_usage,
+    #         self.deploymentList[ID_redis_cart].received_traffic,
+    #         self.deploymentList[ID_redis_cart].transmit_traffic,
+    #         self.deploymentList[ID_checkout_service].num_pods,
+    #         self.deploymentList[ID_checkout_service].desired_replicas,
+    #         self.deploymentList[ID_checkout_service].cpu_usage,
+    #         self.deploymentList[ID_checkout_service].mem_usage,
+    #         self.deploymentList[ID_checkout_service].received_traffic,
+    #         self.deploymentList[ID_checkout_service].transmit_traffic,
+    #         self.deploymentList[ID_frontend].num_pods,
+    #         self.deploymentList[ID_frontend].desired_replicas,
+    #         self.deploymentList[ID_frontend].cpu_usage,
+    #         self.deploymentList[ID_frontend].mem_usage,
+    #         self.deploymentList[ID_frontend].received_traffic,
+    #         self.deploymentList[ID_frontend].transmit_traffic,
+    #         self.deploymentList[ID_email].num_pods,
+    #         self.deploymentList[ID_email].desired_replicas,
+    #         self.deploymentList[ID_email].cpu_usage,
+    #         self.deploymentList[ID_email].mem_usage,
+    #         self.deploymentList[ID_email].received_traffic,
+    #         self.deploymentList[ID_email].transmit_traffic,
+    #     )
+
+
+    #     pr = get_traffic_between_services()
+    #     graph = build_graph(ob,pr)
+        
+
+
+
+    #     data = graph_to_data(graph)
+
+    #     data = flatten_graph_data(data)
+    #     exit()
+    #     ob = data
+    #     return ob
 
     def get_observation_space(self):
         return spaces.Box(
