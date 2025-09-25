@@ -527,8 +527,8 @@ class DeploymentStatus:  # Deployment Status (Workload)
         self.obs = np.array([self.cpu_ratio, self.mem_ratio, current_pod_ratio, desired_pod_ratio], dtype=np.float32)
 
         # Debug print
-        # print(f"[Deployment: {self.name}] Pods={self.num_pods}, Desired={self.desired_replicas}")
-        # print(f"  CPU Ratio={self.cpu_ratio:.2f}, Mem Ratio={self.mem_ratio:.2f} -> OBS={self.obs}")
+        #print(f"[Deployment: {self.name}] Pods={self.num_pods}, Desired={self.desired_replicas}")
+        #print(f"  CPU Ratio={self.cpu_ratio:.2f}, Mem Ratio={self.mem_ratio:.2f} -> OBS={self.obs}")
 
         return self.obs
 
@@ -544,11 +544,11 @@ class DeploymentStatus:  # Deployment Status (Workload)
         resource utilization ratio versus a target utilization ratio.
         """
         # Ensure target values are not zero to avoid division errors
-        if not hasattr(self, 'cpu_target') or self.cpu_target <= 0:
-            self.cpu_target = 0.8  # Default to 80% if not set
+        #if not hasattr(self, 'cpu_target') or self.cpu_target <= 0:
+        self.cpu_target = 0.8  # Default to 80% if not set
 
-        if not hasattr(self, 'mem_target') or self.mem_target <= 0:
-            self.mem_target = 0.8  # Default to 80% if not set
+        # if not hasattr(self, 'mem_target') or self.mem_target <= 0:
+        self.mem_target = 0.8  # Default to 80% if not set
 
         # Calculate desired replicas for each metric based on target utilization
         # Formula: desired = current * ( current_ratio / target_ratio )

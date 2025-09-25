@@ -119,7 +119,7 @@ def get_model(alg, env, tensorboard_log , policy_kwargs):
         return PPO("MlpPolicy",
                     env=env, # Your environment object
                     policy_kwargs=policy_kwargs,
-                    n_steps=2048,           # Increased for more stable updates
+                    n_steps=500,           # Increased for more stable updates
                     batch_size=64,          # Smaller batch size for more gradient updates
                     n_epochs=20,            # More epochs to learn from each rollout
                     gamma=0.99,             # Emphasize long-term rewards
@@ -128,7 +128,7 @@ def get_model(alg, env, tensorboard_log , policy_kwargs):
                     ent_coef=0.005,         # Slightly increased entropy for exploration
                     learning_rate=3e-4,     # A good starting point, consider scheduling
                     verbose=1,
-                    tensorboard_log="./ppo_gnn_autoscaler_logs/"
+                    tensorboard_log="./ppo_gnn_autoscaler_logs_final/"
                     )
     elif alg == "recurrent_ppo":
         return RecurrentPPO("MlpLstmPolicy", **common_args)
