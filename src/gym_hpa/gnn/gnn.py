@@ -4,13 +4,10 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from torch_geometric.nn import GATv2Conv
 
 
-
-
 def flatten_graph_data(data):
     node_feats_flat = data.x.flatten()
     edge_feats_flat = data.edge_attr.flatten()
     return torch.cat([node_feats_flat, edge_feats_flat])
-
 
 
 class AdvancedGNNExtractor(BaseFeaturesExtractor):
@@ -60,7 +57,7 @@ class AdvancedGNNExtractor(BaseFeaturesExtractor):
             out_channels=128,
             heads=4,
             concat=True,
-            edge_dim=edge_feature_dim
+            edge_dim=edge_feature_dim,
         )
         self.norm1 = nn.LayerNorm(128 * 4)
         self.conv2 = GATv2Conv(
@@ -68,7 +65,7 @@ class AdvancedGNNExtractor(BaseFeaturesExtractor):
             out_channels=gnn_out_dim,
             heads=4,
             concat=True,
-            edge_dim=edge_feature_dim
+            edge_dim=edge_feature_dim,
         )
         self.norm2 = nn.LayerNorm(gnn_out_dim * 4)
         # print("GNN layers (GATv2Conv) and LayerNorm initialized.")
@@ -97,7 +94,7 @@ class AdvancedGNNExtractor(BaseFeaturesExtractor):
         # Uncomment the line below to see output for every forward pass
         # print(f"\n--- Forward Pass ---")
         # print(f"Received observations with shape: {observations.shape}")
-        
+
         batch_features = []
         for i, obs in enumerate(observations):
             # --- 1. Deconstruct the flat observation vector ---
@@ -107,16 +104,16 @@ class AdvancedGNNExtractor(BaseFeaturesExtractor):
             node_feats = obs[:node_feat_size].reshape(
                 self.num_nodes, self.node_feature_dim
             )
-            edge_feats = obs[
-                node_feat_size : node_feat_size + edge_feat_size
-            ].reshape(self.num_edges, self.edge_feature_dim)
-            
+            edge_feats = obs[node_feat_size : node_feat_size + edge_feat_size].reshape(
+                self.num_edges, self.edge_feature_dim
+            )
+
             # --- 2. GNN message passing ---
             h = self.conv1(node_feats, self.edge_index, edge_attr=edge_feats)
             h = torch.relu(self.norm1(h))
             h = self.conv2(h, self.edge_index, edge_attr=edge_feats)
             h = self.norm2(h)
-            
+
             # --- 3. Flatten node features (NO global pooling) ---
             graph_feat = h.flatten()
             batch_features.append(graph_feat)
@@ -124,7 +121,7 @@ class AdvancedGNNExtractor(BaseFeaturesExtractor):
         # Stack the features and process through the MLP head
         stacked_features = torch.stack(batch_features)
         final_features = self.linear_head(stacked_features)
-        
+
         # print(f"Final output features shape: {final_features.shape}")
         # print(graph_feat.shape)
         # print("--- End Forward Pass ---")

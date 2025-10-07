@@ -21,6 +21,7 @@ MEM_WEIGHT = 0.3
 
 # --- Helper Functions ---
 
+
 def get_online_boutique_deployment_list(k8s, min_pods, max_pods):
     """Factory function to create a list of DeploymentStatus objects for the Online Boutique app."""
     deployment_configs = [
@@ -36,36 +37,49 @@ def get_online_boutique_deployment_list(k8s, min_pods, max_pods):
         ("frontend", 100, 200, 64, 128),
         ("emailservice", 100, 200, 64, 128),
     ]
-    
+
     deployment_list = []
     for name, cpu_req, cpu_lim, mem_req, mem_lim in deployment_configs:
         deployment_list.append(
             DeploymentStatus(
-                k8s=k8s, name=name, namespace="onlineboutique", container_name=name,
-                max_pods=max_pods, min_pods=min_pods,
-                cpu_request=cpu_req, cpu_limit=cpu_lim,
-                mem_request=mem_req, mem_limit=mem_lim
+                k8s=k8s,
+                name=name,
+                namespace="onlineboutique",
+                container_name=name,
+                max_pods=max_pods,
+                min_pods=min_pods,
+                cpu_request=cpu_req,
+                cpu_limit=cpu_lim,
+                mem_request=mem_req,
+                mem_limit=mem_lim,
             )
         )
     return deployment_list
 
+
 def get_max_cpu():
     return MAX_CPU
+
 
 def get_max_mem():
     return MAX_MEM
 
+
 def get_max_traffic():
     return MAX_TRAFFIC
 
+
 def parse_cpu(cpu_str: str) -> float:
-    if not cpu_str: return 0.0
+    if not cpu_str:
+        return 0.0
     if cpu_str.endswith("m"):
         return float(cpu_str[:-1])
     return float(cpu_str) * 1000
 
+
 def parse_memory(mem_str: str) -> float:
-    if not mem_str: return 0.0
+    if not mem_str:
+        return 0.0
     mem_str = mem_str.lower()
     if mem_str.endswith("ki"):
         return float(mem_str[:-2]) / 1024
@@ -75,12 +89,24 @@ def parse_memory(mem_str: str) -> float:
         return float(mem_str[:-2]) * 1024
     return float(mem_str) / (1024 * 1024)
 
+
 # --- Main Class ---
+
 
 class DeploymentStatus:
     def __init__(
-        self, k8s, name, namespace, container_name, max_pods, min_pods,
-        cpu_request, cpu_limit, mem_request, mem_limit, threshold=0.8
+        self,
+        k8s,
+        name,
+        namespace,
+        container_name,
+        max_pods,
+        min_pods,
+        cpu_request,
+        cpu_limit,
+        mem_request,
+        mem_limit,
+        threshold=0.8,
     ):
         self.k8s = k8s
         self.name = name
@@ -107,10 +133,15 @@ class DeploymentStatus:
         self.latency = 0
         self.pod_names = []
         self.sleep = 0.2
-        self.obs = np.array([0.0, 0.0, self.min_pods / self.max_pods, self.min_pods / self.max_pods], dtype=np.float32)
+        self.obs = np.array(
+            [0.0, 0.0, self.min_pods / self.max_pods, self.min_pods / self.max_pods],
+            dtype=np.float32,
+        )
 
         if self.k8s:
-            logging.info(f"[Deployment {self.name}] Connecting to Kubernetes cluster...")
+            logging.info(
+                f"[Deployment {self.name}] Connecting to Kubernetes cluster..."
+            )
             try:
                 k8s_config = client.Configuration()
                 k8s_config.verify_ssl = False
@@ -119,19 +150,29 @@ class DeploymentStatus:
                 api_client = client.ApiClient(k8s_config)
                 self.v1 = client.CoreV1Api(api_client)
                 self.apps_v1 = client.AppsV1Api(api_client)
-                deployment = self.apps_v1.read_namespaced_deployment(name=self.name, namespace=self.namespace)
+                deployment = self.apps_v1.read_namespaced_deployment(
+                    name=self.name, namespace=self.namespace
+                )
                 self.num_pods = deployment.spec.replicas
                 self.num_previous_pods = deployment.spec.replicas
                 self.update_obs_k8s()
             except Exception as e:
-                logging.error(f"Failed to connect to Kubernetes or find deployment '{self.name}': {e}")
+                logging.error(
+                    f"Failed to connect to Kubernetes or find deployment '{self.name}': {e}"
+                )
                 self.k8s = False
 
     def update_obs_k8s(self):
         try:
-            deployment = self.apps_v1.read_namespaced_deployment(name=self.name, namespace=self.namespace)
-            pods = self.v1.list_namespaced_pod(namespace=self.namespace, label_selector=f"app={self.name}")
-            self.pod_names = [p.metadata.name for p in pods.items if p.status.phase == "Running"]
+            deployment = self.apps_v1.read_namespaced_deployment(
+                name=self.name, namespace=self.namespace
+            )
+            pods = self.v1.list_namespaced_pod(
+                namespace=self.namespace, label_selector=f"app={self.name}"
+            )
+            self.pod_names = [
+                p.metadata.name for p in pods.items if p.status.phase == "Running"
+            ]
             self.num_pods = len(self.pod_names)
         except Exception as e:
             logging.error(f"Error fetching Kubernetes data for '{self.name}': {e}")
@@ -142,7 +183,7 @@ class DeploymentStatus:
             limits = c.resources.limits or {}
             container_limits[c.name] = {
                 "cpu": parse_cpu(limits.get("cpu")),
-                "mem": parse_memory(limits.get("memory"))
+                "mem": parse_memory(limits.get("memory")),
             }
 
         cpu_ratios, mem_ratios = [], []
@@ -161,7 +202,9 @@ class DeploymentStatus:
                     mem_results = fetch_prom(query)
                     if mem_results:
                         mem_usage_bytes = float(mem_results[0]["value"][1])
-                        mem_ratios.append((mem_usage_bytes / (1024*1024)) / limits["mem"])
+                        mem_ratios.append(
+                            (mem_usage_bytes / (1024 * 1024)) / limits["mem"]
+                        )
 
         self.cpu_ratio = np.mean(cpu_ratios) if cpu_ratios else 0
         self.mem_ratio = np.mean(mem_ratios) if mem_ratios else 0
@@ -169,33 +212,55 @@ class DeploymentStatus:
         self.update_replicas()
 
         pod_ratio = self.num_pods / self.max_pods if self.max_pods > 0 else 0.0
-        desired_ratio = self.desired_replicas / self.max_pods if self.max_pods > 0 else 0.0
-        self.obs = np.array([self.cpu_ratio, self.mem_ratio, pod_ratio, desired_ratio], dtype=np.float32)
+        desired_ratio = (
+            self.desired_replicas / self.max_pods if self.max_pods > 0 else 0.0
+        )
+        self.obs = np.array(
+            [self.cpu_ratio, self.mem_ratio, pod_ratio, desired_ratio], dtype=np.float32
+        )
         return self.obs
 
     def update_replicas(self):
         if self.num_pods == 0:
-             self.desired_replicas = self.min_pods
-             return self.desired_replicas
-             
-        desired_cpu = math.ceil(self.num_pods * (self.cpu_ratio / self.cpu_target)) if self.cpu_target > 0 else self.min_pods
-        desired_mem = math.ceil(self.num_pods * (self.mem_ratio / self.mem_target)) if self.mem_target > 0 else self.min_pods
-        
+            self.desired_replicas = self.min_pods
+            return self.desired_replicas
+
+        desired_cpu = (
+            math.ceil(self.num_pods * (self.cpu_ratio / self.cpu_target))
+            if self.cpu_target > 0
+            else self.min_pods
+        )
+        desired_mem = (
+            math.ceil(self.num_pods * (self.mem_ratio / self.mem_target))
+            if self.mem_target > 0
+            else self.min_pods
+        )
+
         self.desired_replicas = max(desired_cpu, desired_mem)
-        self.desired_replicas = max(self.min_pods, min(self.max_pods, self.desired_replicas))
+        self.desired_replicas = max(
+            self.min_pods, min(self.max_pods, self.desired_replicas)
+        )
         return self.desired_replicas
 
     def print_deployment(self):
-        logging.info(f"[Deployment] Name: {self.name}, Namespace: {self.namespace}, Pods: {self.num_pods}, Desired: {self.desired_replicas}")
+        logging.info(
+            f"[Deployment] Name: {self.name}, Namespace: {self.namespace}, Pods: {self.num_pods}, Desired: {self.desired_replicas}"
+        )
 
     def update_deployment_replicas(self, new_replicas):
         try:
-            deployment = self.apps_v1.read_namespaced_deployment(name=self.name, namespace=self.namespace)
+            deployment = self.apps_v1.read_namespaced_deployment(
+                name=self.name, namespace=self.namespace
+            )
             self.num_previous_pods = deployment.spec.replicas
             deployment.spec.replicas = new_replicas
-            self.apps_v1.patch_namespaced_deployment(name=self.name, namespace=self.namespace, body=deployment)
+            self.apps_v1.patch_namespaced_deployment(
+                name=self.name, namespace=self.namespace, body=deployment
+            )
         except Exception as e:
-            logging.error(f"Failed to patch deployment '{self.name}': {e}. Retrying in {self.sleep}s...")
+            logging.error(
+                f"Failed to patch deployment '{self.name}': {e}. Retrying in {self.sleep}s..."
+            )
             time.sleep(self.sleep)
             self.update_deployment_replicas(new_replicas)
 
