@@ -19,11 +19,13 @@ from policies.util.util import test_model
 from gym_hpa.paths import RESULTS_DIR
 
 
+from typing import Dict, Any
+
 # Logging
 # logger = logging.getLogger(__name__)
 logging.basicConfig(
     handlers=[
-        logging.FileHandler("runn.log", mode="w"),
+        logging.FileHandler("run.log", mode="w"),
         logging.StreamHandler(),  # This will also print to console
     ],
     level=logging.INFO,
@@ -72,9 +74,25 @@ parser.add_argument("--steps", type=int, default=500, help="The steps for saving
 parser.add_argument(
     "--total_steps", type=int, default=5000, help="The total number of steps."
 )
+parser.add_argument(
+    "--scaler_duration",
+    type=int,
+    default=10,
+    help="Duration to run continuous scaler (minutes)",
+)
+parser.add_argument(
+    "--scaler_interval",
+    type=int,
+    default=30,
+    help="Interval between scaling decisions (seconds)",
+)
 
 
-def get_policy_kwargs():
+def get_policy_kwargs() -> Dict[str, Any]:
+    """
+    Defines the full policy configuration, including the feature extractor
+    and a custom, more capable network architecture for the actor and critic.
+    """
     return dict(
         features_extractor_class=AdvancedGNNExtractor,
         features_extractor_kwargs={
@@ -90,6 +108,15 @@ def get_policy_kwargs():
             ),
             "features_dim": 256,
         },
+        # --- NEW: Define a more robust network architecture ---
+        # We define separate networks for the policy (pi) and value function (vf).
+        # A deeper network allows for learning more complex functions.
+        net_arch=dict(
+            pi=[256, 128, 64],  # Policy network (actor)
+            vf=[256, 128, 64],  # Value network (critic)
+        ),
+        # Using Tanh activation function can help in continuous control problems
+        activation_fn=torch.nn.Tanh,
     )
 
 
@@ -101,10 +128,18 @@ def get_model(alg, env, tensorboard_log, policy_kwargs):
     if alg == "ppo":
         return PPO(
             "MlpPolicy",
-            n_steps=500,
-            batch_size=125,
+            env=env,  # Your environment object
             policy_kwargs=policy_kwargs,
-            **common_args,
+            n_steps=500,  # Increased for more stable updates
+            batch_size=64,  # Smaller batch size for more gradient updates
+            n_epochs=20,  # More epochs to learn from each rollout
+            gamma=0.99,  # Emphasize long-term rewards
+            gae_lambda=0.95,  # Standard choice for advantage estimation
+            clip_range=0.2,  # Standard PPO clipping
+            ent_coef=0.005,  # Slightly increased entropy for exploration
+            learning_rate=3e-4,  # A good starting point, consider scheduling
+            verbose=1,
+            tensorboard_log="./ppo_gnn_autoscaler_logs_final/",
         )
     elif alg == "recurrent_ppo":
         return RecurrentPPO("MlpLstmPolicy", **common_args)
@@ -190,6 +225,54 @@ def set_seed(seed=42):
         torch.cuda.manual_seed_all(seed)
 
 
+def run_continuous_scaler(model, env, name, duration_minutes=60, interval_seconds=30):
+    """
+    Run the model as a continuous scaler for the specified duration
+    """
+    import time
+
+    logging.info(f"Starting continuous scaler for {duration_minutes} minutes")
+    logging.info(f"Scaling decisions every {interval_seconds} seconds")
+
+    start_time = time.time()
+    end_time = start_time + (duration_minutes * 60)
+
+    step_count = 0
+
+    while time.time() < end_time:
+        # Get current state - handle tuple return from reset()
+        reset_result = env.reset()
+        if isinstance(reset_result, tuple):
+            obs = reset_result[0]  # Extract just the observation
+        else:
+            obs = reset_result
+
+        # Get model's action recommendation
+        action, _states = model.predict(obs, deterministic=True)
+
+        # Take the action (this will scale the deployments)
+        step_result = env.step(action)
+        if len(step_result) == 5:
+            obs, reward, terminated, truncated, info = step_result
+            done = terminated or truncated
+        else:
+            obs, reward, done, info = step_result
+
+        step_count += 1
+        logging.info(f"Step {step_count}: Action={action}, Reward={reward:.3f}")
+
+        # Log current deployment states
+        for i, deployment in enumerate(env.deploymentList):
+            logging.info(
+                f"  {deployment.name}: {deployment.num_pods} pods (desired: {deployment.desired_replicas})"
+            )
+
+        # Wait before next scaling decision
+        time.sleep(interval_seconds)
+
+    logging.info(f"Continuous scaler completed after {step_count} steps")
+
+
 def main():
     set_seed(42)
     args = parser.parse_args()
@@ -233,10 +316,23 @@ def main():
     if args.testing:
         logging.info(f"Testing model loaded from: {args.test_path}")
 
-    if args.testing:
-        model = get_load_model(args.alg, tensorboard_log, args.test_path)
+        # Create fresh environment for testing
+        env = get_env(args.use_case, args.k8s, args.goal)
 
-        logging.info("Testing completed.")
+        # Load model and set environment
+        if args.alg == "ppo":
+            model = PPO.load(args.test_path)
+        elif args.alg == "recurrent_ppo":
+            model = RecurrentPPO.load(args.test_path)
+        elif args.alg == "a2c":
+            model = A2C.load(args.test_path)
+
+        model.set_env(env)
+        # Run as continuous scaler instead of fixed #episodes
+        # run_continuous_scaler(model, env, run_name)
+        run_continuous_scaler(
+            model, env, run_name, args.scaler_duration, args.scaler_interval
+        )
 
 
 if __name__ == "__main__":
