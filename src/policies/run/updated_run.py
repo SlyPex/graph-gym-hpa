@@ -12,7 +12,6 @@ import random
 import numpy as np
 
 # Local
-from gym_hpa.rl_environments.redis import Redis
 from gym_hpa.rl_environments.online_boutique import OnlineBoutique
 from gym_hpa.gnn.gnn import AdvancedGNNExtractor
 from policies.util.util import test_model
@@ -167,9 +166,7 @@ def get_load_model(alg, tensorboard_log, load_path):
 
 def get_env(use_case, k8s, goal):
     env = 0
-    if use_case == "redis":
-        env = Redis(k8s=k8s, goal_reward=goal)
-    elif use_case == "online_boutique":
+    if use_case == "online_boutique":
         env = OnlineBoutique(k8s=k8s, goal_reward=goal)
     else:
         logging.error("Invalid use_case!")
