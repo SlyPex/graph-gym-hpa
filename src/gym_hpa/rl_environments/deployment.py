@@ -3,8 +3,9 @@ import math
 import random
 import time
 import requests
-from kubernetes import client , config
+from kubernetes import client
 import numpy as np
+
 # Constants
 MAX_CPU = 10000  # cpu in m
 MAX_MEM = 10000  # memory in MiB
@@ -21,7 +22,6 @@ HOST = "http://localhost:8080"
 
 # TODO: Add the TOKEN from your cluster!
 TOKEN = ""
-
 
 
 def get_redis_deployment_list(k8s, min, max):
@@ -259,11 +259,12 @@ def convert_to_mega_memory(value):
 
     return new_value
 
+
 def parse_cpu(cpu_str: str) -> float:
     """Convert Kubernetes CPU string (e.g. '500m', '2') to millicores."""
     if cpu_str.endswith("m"):
         return float(cpu_str[:-1])  # already in millicores
-    return float(cpu_str) * 1000   # assume in cores → convert to millicores
+    return float(cpu_str) * 1000  # assume in cores → convert to millicores
 
 
 def parse_memory(mem_str: str) -> float:
@@ -284,6 +285,8 @@ def parse_memory(mem_str: str) -> float:
     else:
         # bytes → convert to Mi
         return float(mem_str) / (1024 * 1024)
+
+
 class DeploymentStatus:  # Deployment Status (Workload)
     def __init__(
         self,
@@ -382,9 +385,9 @@ class DeploymentStatus:  # Deployment Status (Workload)
 
         # App. Latency
         self.latency = 0
-        
+
         self.obs = None
-        if self.k8s:  # Real env: consider a k8s cluster    
+        if self.k8s:  # Real env: consider a k8s cluster
             logging.info("[Deployment] Consider a real k8s cluster ... ")
             # out of cluster!
             # config.load_kube_config()
@@ -417,7 +420,7 @@ class DeploymentStatus:  # Deployment Status (Workload)
             self.deployment_object = self.apps_v1.read_namespaced_deployment(
                 name=self.name, namespace=self.namespace
             )
-                # Get the initial replica count and store it
+            # Get the initial replica count and store it
             initial_deployment = self.apps_v1.read_namespaced_deployment(
                 name=self.name, namespace=self.namespace
             )
@@ -431,7 +434,6 @@ class DeploymentStatus:  # Deployment Status (Workload)
 
         # else: # Simulation Environment
         # Update Desired replicas
-
 
     def get_resource_limits(self):
         """
@@ -468,8 +470,6 @@ class DeploymentStatus:  # Deployment Status (Workload)
 
         return total_cpu_limit or None, total_mem_limit or None
 
-
-
     def update_obs_k8s(self):
         """
         Observes the current state (pods, CPU/Mem ratios) and calculates the
@@ -482,11 +482,13 @@ class DeploymentStatus:  # Deployment Status (Workload)
             pods = self.v1.list_namespaced_pod(
                 namespace=self.namespace, label_selector=f"app={self.name}"
             )
-            self.pod_names = [p.metadata.name for p in pods.items if p.status.phase == "Running"]
+            self.pod_names = [
+                p.metadata.name for p in pods.items if p.status.phase == "Running"
+            ]
             self.num_pods = len(self.pod_names)
         except Exception as e:
             print(f"Error fetching Kubernetes data for '{self.name}': {e}")
-            return self.obs # Return last known observation on failure
+            return self.obs  # Return last known observation on failure
 
         # Collect container-level resource limits
         container_limits = {}
@@ -511,7 +513,9 @@ class DeploymentStatus:  # Deployment Status (Workload)
                     query_mem = f'sum(container_memory_working_set_bytes{{namespace="{self.namespace}", pod="{pod}", container="{container_name}"}})'
                     results_mem = self.fetch_prom(query_mem)
                     if results_mem:
-                        mem_usage_mib = float(results_mem[0]["value"][1]) / (1024 * 1024)
+                        mem_usage_mib = float(results_mem[0]["value"][1]) / (
+                            1024 * 1024
+                        )
                         mem_ratios.append(mem_usage_mib / limits["mem"])
 
         # Average and clamp the utilization ratios
@@ -523,20 +527,19 @@ class DeploymentStatus:  # Deployment Status (Workload)
 
         # Create the final observation array based on CURRENT and DESIRED state
         current_pod_ratio = self.num_pods / self.max_pods if self.max_pods > 0 else 0.0
-        desired_pod_ratio = self.desired_replicas / self.max_pods if self.max_pods > 0 else 0.0
-        self.obs = np.array([self.cpu_ratio, self.mem_ratio, current_pod_ratio, desired_pod_ratio], dtype=np.float32)
+        desired_pod_ratio = (
+            self.desired_replicas / self.max_pods if self.max_pods > 0 else 0.0
+        )
+        self.obs = np.array(
+            [self.cpu_ratio, self.mem_ratio, current_pod_ratio, desired_pod_ratio],
+            dtype=np.float32,
+        )
 
         # Debug print
-        #print(f"[Deployment: {self.name}] Pods={self.num_pods}, Desired={self.desired_replicas}")
-        #print(f"  CPU Ratio={self.cpu_ratio:.2f}, Mem Ratio={self.mem_ratio:.2f} -> OBS={self.obs}")
+        # print(f"[Deployment: {self.name}] Pods={self.num_pods}, Desired={self.desired_replicas}")
+        # print(f"  CPU Ratio={self.cpu_ratio:.2f}, Mem Ratio={self.mem_ratio:.2f} -> OBS={self.obs}")
 
         return self.obs
-
-
-
-
-
-
 
     def update_replicas(self):
         """
@@ -544,7 +547,7 @@ class DeploymentStatus:  # Deployment Status (Workload)
         resource utilization ratio versus a target utilization ratio.
         """
         # Ensure target values are not zero to avoid division errors
-        #if not hasattr(self, 'cpu_target') or self.cpu_target <= 0:
+        # if not hasattr(self, 'cpu_target') or self.cpu_target <= 0:
         self.cpu_target = 0.8  # Default to 80% if not set
 
         # if not hasattr(self, 'mem_target') or self.mem_target <= 0:
@@ -566,12 +569,12 @@ class DeploymentStatus:  # Deployment Status (Workload)
         # --- Clamping the result to min/max boundaries ---
 
         # Ensure a minimum of 1 replica (or self.min_pods if defined)
-        min_pods = getattr(self, 'min_pods', 1)
+        min_pods = getattr(self, "min_pods", 1)
         if self.desired_replicas < min_pods:
             self.desired_replicas = min_pods
 
         # Ensure the number of replicas does not exceed the maximum
-        if hasattr(self, 'max_pods') and self.desired_replicas > self.max_pods:
+        if hasattr(self, "max_pods") and self.desired_replicas > self.max_pods:
             self.desired_replicas = self.max_pods
 
         return self.desired_replicas

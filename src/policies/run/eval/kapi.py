@@ -8,4 +8,6 @@ apps_v1 = client.AppsV1Api()
 deployments = apps_v1.list_namespaced_deployment(namespace="onlineboutique")
 
 for deploy in deployments.items:
-    print(f"{deploy.metadata.name}: desired={deploy.spec.replicas}, available={deploy.status.available_replicas}")
+    print(
+        f"{deploy.metadata.name}: desired={deploy.spec.replicas}, available={deploy.status.available_replicas}"
+    )

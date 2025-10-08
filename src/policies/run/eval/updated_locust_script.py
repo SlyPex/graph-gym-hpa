@@ -1,7 +1,6 @@
 import csv
 import time
 from datetime import datetime
-import gevent
 import random
 from faker import Faker
 import datetime as dt
@@ -13,35 +12,72 @@ from kubernetes import client, config
 # ---------------- Locust workload (from your script) ----------------
 fake = Faker()
 products = [
-    '0PUK6V6EV0','1YMWWN1N4O','2ZYFJ3GM2N','66VCHSJNUP',
-    '6E92ZMYYFZ','9SIQT8TOJO','L9ECAV7KIM','LS4PSXUNUM','OLJCESPC7Z'
+    "0PUK6V6EV0",
+    "1YMWWN1N4O",
+    "2ZYFJ3GM2N",
+    "66VCHSJNUP",
+    "6E92ZMYYFZ",
+    "9SIQT8TOJO",
+    "L9ECAV7KIM",
+    "LS4PSXUNUM",
+    "OLJCESPC7Z",
 ]
 
-def index(l): l.client.get("/")
-def setCurrency(l): l.client.post("/setCurrency", {'currency_code': random.choice(['EUR','USD','JPY','CAD','GBP','TRY'])})
-def browseProduct(l): l.client.get("/product/" + random.choice(products))
-def viewCart(l): l.client.get("/cart")
+
+def index(l):
+    l.client.get("/")
+
+
+def setCurrency(l):
+    l.client.post(
+        "/setCurrency",
+        {"currency_code": random.choice(["EUR", "USD", "JPY", "CAD", "GBP", "TRY"])},
+    )
+
+
+def browseProduct(l):
+    l.client.get("/product/" + random.choice(products))
+
+
+def viewCart(l):
+    l.client.get("/cart")
+
+
 def addToCart(l):
     product = random.choice(products)
     l.client.get("/product/" + product)
-    l.client.post("/cart", {'product_id': product, 'quantity': random.randint(1,10)})
-def empty_cart(l): l.client.post('/cart/empty')
+    l.client.post("/cart", {"product_id": product, "quantity": random.randint(1, 10)})
+
+
+def empty_cart(l):
+    l.client.post("/cart/empty")
+
+
 def checkout(l):
     addToCart(l)
-    current_year = dt.datetime.now().year+1
-    l.client.post("/cart/checkout", {
-        'email': fake.email(),
-        'street_address': fake.street_address(),
-        'zip_code': fake.zipcode(),
-        'city': fake.city(),
-        'state': fake.state_abbr(),
-        'country': fake.country(),
-        'credit_card_number': fake.credit_card_number(card_type="visa"),
-        'credit_card_expiration_month': random.randint(1, 12),
-        'credit_card_expiration_year': random.randint(current_year, current_year+10),
-        'credit_card_cvv': f"{random.randint(100, 999)}",
-    })
-def logout(l): l.client.get('/logout')
+    current_year = dt.datetime.now().year + 1
+    l.client.post(
+        "/cart/checkout",
+        {
+            "email": fake.email(),
+            "street_address": fake.street_address(),
+            "zip_code": fake.zipcode(),
+            "city": fake.city(),
+            "state": fake.state_abbr(),
+            "country": fake.country(),
+            "credit_card_number": fake.credit_card_number(card_type="visa"),
+            "credit_card_expiration_month": random.randint(1, 12),
+            "credit_card_expiration_year": random.randint(
+                current_year, current_year + 10
+            ),
+            "credit_card_cvv": f"{random.randint(100, 999)}",
+        },
+    )
+
+
+def logout(l):
+    l.client.get("/logout")
+
 
 class UserBehavior(TaskSet):
     tasks = {
@@ -52,12 +88,17 @@ class UserBehavior(TaskSet):
         viewCart: 3,
         checkout: 1,
     }
-    def on_start(self): index(self)
+
+    def on_start(self):
+        index(self)
+
 
 class WebsiteUser(FastHttpUser):
     tasks = [UserBehavior]
     wait_time = between(1, 10)
     host = "http://localhost:8080"
+
+
 # ---------------- K8s setup ----------------
 config.load_kube_config()
 apps_v1 = client.AppsV1Api()
@@ -65,9 +106,20 @@ apps_v1 = client.AppsV1Api()
 # ---------------- Logging setup ----------------
 OUT_FILE = "autoscaling_eval.csv"
 FIELDNAMES = [
-    "timestamp", "run_id", "strategy", "load_users", "spawn_rate",
-    "rps", "total_requests", "failures", "avg_latency_ms", "p95_latency_ms",
-    "endpoint", "deployment", "desired_replicas", "available_replicas"
+    "timestamp",
+    "run_id",
+    "strategy",
+    "load_users",
+    "spawn_rate",
+    "rps",
+    "total_requests",
+    "failures",
+    "avg_latency_ms",
+    "p95_latency_ms",
+    "endpoint",
+    "deployment",
+    "desired_replicas",
+    "available_replicas",
 ]
 
 RUN_ID = "run1"
@@ -75,9 +127,10 @@ STRATEGY = "hpa-cpu-70"
 LOAD_USERS = 100
 SPAWN_RATE = 10
 DURATION = 30  # 5 mins
-INTERVAL = 10    # sample interval
+INTERVAL = 10  # sample interval
 
 NAMESPACE = "onlineboutique"
+
 
 # ---------------- Helper: fetch replicas ----------------
 def get_replicas():
@@ -89,6 +142,7 @@ def get_replicas():
         available = dep.status.available_replicas or 0
         replica_data[name] = (desired, available)
     return replica_data
+
 
 # ---------------- Main ----------------
 if __name__ == "__main__":

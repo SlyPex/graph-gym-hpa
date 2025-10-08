@@ -53,6 +53,7 @@ service_dependencies = {
 
 PROMETHEUS_URL = "http://localhost:31090"
 
+
 # ---------------------------
 # Fetch traffic
 # ---------------------------
@@ -76,11 +77,12 @@ def fetch_prom(query, prometheus_url=PROMETHEUS_URL, retry_sleep=5, max_retries=
             _, value_str = result[0]["value"]
             # print(f"[DEBUG] Prometheus query success: {query} -> {value_str}")
             return float(value_str)
-        except Exception as e:
+        except Exception:
             # print(f"[ERROR] Exception fetching Prometheus query: {query}, retry {retries+1}, {e}")
             retries += 1
             time.sleep(retry_sleep)
     raise RuntimeError(f"Prometheus query failed after {max_retries} retries: {query}")
+
 
 def get_traffic_between_services(prometheus_url=PROMETHEUS_URL):
     traffic_data = []
@@ -91,15 +93,19 @@ def get_traffic_between_services(prometheus_url=PROMETHEUS_URL):
                 f'destination_service_name="{dest_name}"}}[1m])'
             )
             val = fetch_prom(query, prometheus_url)
-            traffic_data.append({
-                "source": source_name,
-                "destination": dest_name,
-                "traffic": val,
-            })
+            traffic_data.append(
+                {
+                    "source": source_name,
+                    "destination": dest_name,
+                    "traffic": val,
+                }
+            )
             # print(f"[DEBUG] Traffic {source_name}->{dest_name} = {val}")
     df = pd.DataFrame(traffic_data)
     # print("[INFO] Traffic DataFrame built:\n", df)
     return df
+
+
 # ---------------------------
 # Build graph from metrics dict
 # ---------------------------
@@ -123,8 +129,8 @@ def build_graph(metrics_dict, traffic_metrics):
     for source, destinations in service_dependencies.items():
         for dest in destinations:
             traffic_row = traffic_metrics[
-                (traffic_metrics["source"] == source) &
-                (traffic_metrics["destination"] == dest)
+                (traffic_metrics["source"] == source)
+                & (traffic_metrics["destination"] == dest)
             ]
             if traffic_row.empty:
                 raise ValueError(f"No traffic data for edge {source} -> {dest}")
@@ -133,6 +139,7 @@ def build_graph(metrics_dict, traffic_metrics):
             # print(f"[DEBUG] Edge built: {source} -> {dest}, traffic={traffic_val}")
 
     return {"nodes": nodes, "edges": edges}
+
 
 # ---------------------------
 # Convert graph to PyG Data
@@ -144,8 +151,11 @@ def graph_to_data(graph):
 
     # Node features
     x = torch.tensor(
-        [[n["cpu_ratio"], n["mem_ratio"], n["pod_count"], n["desired_pod_count"]] for n in node_list],
-        dtype=torch.float
+        [
+            [n["cpu_ratio"], n["mem_ratio"], n["pod_count"], n["desired_pod_count"]]
+            for n in node_list
+        ],
+        dtype=torch.float,
     )
 
     # Edges
@@ -165,6 +175,7 @@ def graph_to_data(graph):
     # print("[DEBUG] Edge features (edge_attr):\n", edge_attr)
 
     return Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
+
 
 # ---------------------------
 # Flatten graph for RL

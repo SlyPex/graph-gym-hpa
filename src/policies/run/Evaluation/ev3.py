@@ -14,7 +14,9 @@ NAMESPACE = "onlineboutique"
 REPLICA_FILE = "replicas.csv"
 REPLICA_METRICS_FILE = "replicas_metrics.csv"
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
 
 # -------------------
 # Kubernetes setup
@@ -24,6 +26,7 @@ try:
 except Exception:
     config.load_incluster_config()
 apps_api = client.AppsV1Api()
+
 
 # -------------------
 # Prometheus helpers
@@ -38,16 +41,29 @@ def query_prometheus(query: str):
         logging.error(f"Prometheus query failed: {e}")
         return []
 
+
 def get_cpu_usage():
     # CPU in cores
     query = f'rate(container_cpu_usage_seconds_total{{namespace="{NAMESPACE}",container!=""}}[1m])'
     results = query_prometheus(query)
-    return {r["metric"].get("pod"): float(r["value"][1]) for r in results if "pod" in r["metric"]}
+    return {
+        r["metric"].get("pod"): float(r["value"][1])
+        for r in results
+        if "pod" in r["metric"]
+    }
+
 
 def get_mem_usage():
-    query = f'container_memory_working_set_bytes{{namespace="{NAMESPACE}",container!=""}}'
+    query = (
+        f'container_memory_working_set_bytes{{namespace="{NAMESPACE}",container!=""}}'
+    )
     results = query_prometheus(query)
-    return {r["metric"].get("pod"): float(r["value"][1]) for r in results if "pod" in r["metric"]}
+    return {
+        r["metric"].get("pod"): float(r["value"][1])
+        for r in results
+        if "pod" in r["metric"]
+    }
+
 
 # -------------------
 # Kubernetes helpers
@@ -62,12 +78,24 @@ def get_replicas():
         )
     return replica_data
 
+
 # -------------------
 # Writers
 # -------------------
 def init_csv_files():
-    with open(REPLICA_FILE, "w", newline="") as f1, open(REPLICA_METRICS_FILE, "w", newline="") as f2:
-        writer1 = csv.DictWriter(f1, fieldnames=["timestamp", "deployment", "desired_replicas", "available_replicas"])
+    with (
+        open(REPLICA_FILE, "w", newline="") as f1,
+        open(REPLICA_METRICS_FILE, "w", newline="") as f2,
+    ):
+        writer1 = csv.DictWriter(
+            f1,
+            fieldnames=[
+                "timestamp",
+                "deployment",
+                "desired_replicas",
+                "available_replicas",
+            ],
+        )
         writer2 = csv.DictWriter(
             f2,
             fieldnames=[
@@ -83,14 +111,26 @@ def init_csv_files():
         writer1.writeheader()
         writer2.writeheader()
 
+
 def log_metrics():
     timestamp = datetime.utcnow().isoformat()
     replica_data = get_replicas()
     cpu_usage = get_cpu_usage()
     mem_usage = get_mem_usage()
 
-    with open(REPLICA_FILE, "a", newline="") as f1, open(REPLICA_METRICS_FILE, "a", newline="") as f2:
-        writer1 = csv.DictWriter(f1, fieldnames=["timestamp", "deployment", "desired_replicas", "available_replicas"])
+    with (
+        open(REPLICA_FILE, "a", newline="") as f1,
+        open(REPLICA_METRICS_FILE, "a", newline="") as f2,
+    ):
+        writer1 = csv.DictWriter(
+            f1,
+            fieldnames=[
+                "timestamp",
+                "deployment",
+                "desired_replicas",
+                "available_replicas",
+            ],
+        )
         writer2 = csv.DictWriter(
             f2,
             fieldnames=[
@@ -128,6 +168,7 @@ def log_metrics():
                         "memory_bytes": mem_usage.get(pod, 0),
                     }
                     writer2.writerow(row)
+
 
 # -------------------
 # Main

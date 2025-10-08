@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # IMPORTANT: monkey-patch before any stdlib imports that use ssl/urllib3/requests
 from gevent import monkey
+
 monkey.patch_all()
 
 import csv
@@ -18,35 +19,72 @@ from kubernetes import client, config
 # ---------------- Locust workload ----------------
 fake = Faker()
 products = [
-    '0PUK6V6EV0','1YMWWN1N4O','2ZYFJ3GM2N','66VCHSJNUP',
-    '6E92ZMYYFZ','9SIQT8TOJO','L9ECAV7KIM','LS4PSXUNUM','OLJCESPC7Z'
+    "0PUK6V6EV0",
+    "1YMWWN1N4O",
+    "2ZYFJ3GM2N",
+    "66VCHSJNUP",
+    "6E92ZMYYFZ",
+    "9SIQT8TOJO",
+    "L9ECAV7KIM",
+    "LS4PSXUNUM",
+    "OLJCESPC7Z",
 ]
 
-def index(l): l.client.get("/")
-def setCurrency(l): l.client.post("/setCurrency", {'currency_code': random.choice(['EUR','USD','JPY','CAD','GBP','TRY'])})
-def browseProduct(l): l.client.get("/product/" + random.choice(products))
-def viewCart(l): l.client.get("/cart")
+
+def index(l):
+    l.client.get("/")
+
+
+def setCurrency(l):
+    l.client.post(
+        "/setCurrency",
+        {"currency_code": random.choice(["EUR", "USD", "JPY", "CAD", "GBP", "TRY"])},
+    )
+
+
+def browseProduct(l):
+    l.client.get("/product/" + random.choice(products))
+
+
+def viewCart(l):
+    l.client.get("/cart")
+
+
 def addToCart(l):
     product = random.choice(products)
     l.client.get("/product/" + product)
-    l.client.post("/cart", {'product_id': product, 'quantity': random.randint(1,10)})
-def empty_cart(l): l.client.post('/cart/empty')
+    l.client.post("/cart", {"product_id": product, "quantity": random.randint(1, 10)})
+
+
+def empty_cart(l):
+    l.client.post("/cart/empty")
+
+
 def checkout(l):
     addToCart(l)
-    current_year = dt.datetime.now().year+1
-    l.client.post("/cart/checkout", {
-        'email': fake.email(),
-        'street_address': fake.street_address(),
-        'zip_code': fake.zipcode(),
-        'city': fake.city(),
-        'state': fake.state_abbr(),
-        'country': fake.country(),
-        'credit_card_number': fake.credit_card_number(card_type="visa"),
-        'credit_card_expiration_month': random.randint(1, 12),
-        'credit_card_expiration_year': random.randint(current_year, current_year+10),
-        'credit_card_cvv': f"{random.randint(100, 999)}",
-    })
-def logout(l): l.client.get('/logout')
+    current_year = dt.datetime.now().year + 1
+    l.client.post(
+        "/cart/checkout",
+        {
+            "email": fake.email(),
+            "street_address": fake.street_address(),
+            "zip_code": fake.zipcode(),
+            "city": fake.city(),
+            "state": fake.state_abbr(),
+            "country": fake.country(),
+            "credit_card_number": fake.credit_card_number(card_type="visa"),
+            "credit_card_expiration_month": random.randint(1, 12),
+            "credit_card_expiration_year": random.randint(
+                current_year, current_year + 10
+            ),
+            "credit_card_cvv": f"{random.randint(100, 999)}",
+        },
+    )
+
+
+def logout(l):
+    l.client.get("/logout")
+
 
 class UserBehavior(TaskSet):
     tasks = {
@@ -57,12 +95,16 @@ class UserBehavior(TaskSet):
         viewCart: 3,
         checkout: 1,
     }
-    def on_start(self): index(self)
+
+    def on_start(self):
+        index(self)
+
 
 class WebsiteUser(FastHttpUser):
     tasks = [UserBehavior]
     wait_time = between(1, 10)
     host = "http://localhost:8080"
+
 
 # ---------------- Config ----------------
 config.load_kube_config()
@@ -82,11 +124,13 @@ SPAWN_RATE = 15
 DURATION = 300  # seconds
 INTERVAL = 10  # seconds
 
+
 # ---------------- Helpers ----------------
 def query_prometheus(query):
     resp = requests.get(PROM_URL, params={"query": query})
     results = resp.json()["data"]["result"]
     return results
+
 
 def get_cpu_mem_usage():
     cpu_query = f'rate(container_cpu_usage_seconds_total{{namespace="{NAMESPACE}",container!="POD"}}[1m])'
@@ -100,6 +144,7 @@ def get_cpu_mem_usage():
 
     return cpu_usage, mem_usage
 
+
 def get_replicas():
     deployments = apps_v1.list_namespaced_deployment(NAMESPACE).items
     replica_data = {}
@@ -109,6 +154,7 @@ def get_replicas():
         available = dep.status.available_replicas or 0
         replica_data[name] = (desired, available)
     return replica_data
+
 
 def map_pods_to_deployments():
     """
@@ -131,6 +177,7 @@ def map_pods_to_deployments():
         mapping[pod_name] = dep_name
     return mapping
 
+
 # ---------------- Main ----------------
 if __name__ == "__main__":
     # Locust environment
@@ -138,18 +185,40 @@ if __name__ == "__main__":
     env.create_local_runner()
     env.runner.start(LOAD_USERS, spawn_rate=SPAWN_RATE)
 
-    with open(LOCUST_FILE, "w", newline="") as f1, open(REPLICAS_FILE, "w", newline="") as f2:
-        writer1 = csv.DictWriter(f1, fieldnames=[
-            "timestamp", "run_id", "strategy", "load_users", "spawn_rate",
-            "endpoint", "rps", "total_requests", "failures",
-            "avg_latency_ms", "p95_latency_ms"
-        ])
+    with (
+        open(LOCUST_FILE, "w", newline="") as f1,
+        open(REPLICAS_FILE, "w", newline="") as f2,
+    ):
+        writer1 = csv.DictWriter(
+            f1,
+            fieldnames=[
+                "timestamp",
+                "run_id",
+                "strategy",
+                "load_users",
+                "spawn_rate",
+                "endpoint",
+                "rps",
+                "total_requests",
+                "failures",
+                "avg_latency_ms",
+                "p95_latency_ms",
+            ],
+        )
         writer1.writeheader()
 
-        writer2 = csv.DictWriter(f2, fieldnames=[
-            "timestamp", "deployment", "desired_replicas", "available_replicas",
-            "pod", "cpu_cores", "memory_bytes"
-        ])
+        writer2 = csv.DictWriter(
+            f2,
+            fieldnames=[
+                "timestamp",
+                "deployment",
+                "desired_replicas",
+                "available_replicas",
+                "pod",
+                "cpu_cores",
+                "memory_bytes",
+            ],
+        )
         writer2.writeheader()
 
         start_time = time.time()
@@ -169,7 +238,9 @@ if __name__ == "__main__":
                     "total_requests": stats.num_requests,
                     "failures": stats.num_failures,
                     "avg_latency_ms": round(stats.avg_response_time or 0, 2),
-                    "p95_latency_ms": round(stats.get_response_time_percentile(0.95) or 0, 2),
+                    "p95_latency_ms": round(
+                        stats.get_response_time_percentile(0.95) or 0, 2
+                    ),
                 }
                 writer1.writerow(row)
             f1.flush()

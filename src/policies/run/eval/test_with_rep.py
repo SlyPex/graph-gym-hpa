@@ -38,12 +38,14 @@ def collect_replicas(stop_event, interval=10):
             timestamp = time.time()
             deployments = apps_v1.list_namespaced_deployment(namespace=NAMESPACE)
             for deploy in deployments.items:
-                writer.writerow([
-                    timestamp,
-                    deploy.metadata.name,
-                    deploy.spec.replicas,
-                    deploy.status.available_replicas or 0
-                ])
+                writer.writerow(
+                    [
+                        timestamp,
+                        deploy.metadata.name,
+                        deploy.spec.replicas,
+                        deploy.status.available_replicas or 0,
+                    ]
+                )
             f.flush()
             time.sleep(interval)
 

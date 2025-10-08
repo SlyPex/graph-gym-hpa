@@ -2,10 +2,10 @@ from locust import HttpUser, task, between
 from locust.env import Environment
 from locust.stats import stats_printer, stats_history
 import gevent
-import time
 
 # 👇 replace this with your actual frontend URL
 FRONTEND_URL = "http://localhost:8080"
+
 
 class WebsiteUser(HttpUser):
     wait_time = between(1, 3)
@@ -37,5 +37,6 @@ if __name__ == "__main__":
     # Print final stats
     print("Final request stats:")
     for s in env.stats.entries.values():
-        print(f"{s.method} {s.name} - {s.num_requests} requests, failures={s.num_failures}, avg_response_time={s.avg_response_time:.2f}ms")
-
+        print(
+            f"{s.method} {s.name} - {s.num_requests} requests, failures={s.num_failures}, avg_response_time={s.avg_response_time:.2f}ms"
+        )

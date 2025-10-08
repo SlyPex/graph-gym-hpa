@@ -212,8 +212,6 @@ class OnlineBoutique(gym.Env):
 
     # revision here!
     def step(self, action):
-
-
         if self.current_step == 1:
             if not self.k8s:
                 self.simulation_update()
@@ -254,7 +252,6 @@ class OnlineBoutique(gym.Env):
                 and self.constraint_min_pod_replicas is False
                 and self.constraint_max_pod_replicas is False
             ):
-
                 # logging.info('[Step {}] | Waiting {} seconds for enabling action ...'
                 # .format(self.current_step, self.waiting_period))
                 time.sleep(self.waiting_period)  # Wait a few seconds...
@@ -313,7 +310,6 @@ class OnlineBoutique(gym.Env):
                 self.execution_time,
             )
 
-
         # return ob, reward, self.episode_over, self.info
         return np.array(ob), reward, self.episode_over, self.episode_over, self.info
 
@@ -328,7 +324,6 @@ class OnlineBoutique(gym.Env):
         -------
         observation (object): the initial observation of the space.
         """
-
 
         self.current_step = 0
         self.episode_over = False
@@ -345,7 +340,6 @@ class OnlineBoutique(gym.Env):
         )
 
         initial_state = self.get_state()
-
 
         return np.array(initial_state), self.info
 
@@ -427,8 +421,6 @@ class OnlineBoutique(gym.Env):
 
     @property
     def get_reward(self):
-
-
         # Reward based on Keyword!
         if self.constraint_max_pod_replicas:
             if self.goal_reward == COST:
@@ -445,6 +437,7 @@ class OnlineBoutique(gym.Env):
         # Reward Calculation
         reward = self.calculate_reward()
         return reward
+
     def get_state(self):
         # Step 1: Build metrics dict from DeploymentStatus obs
         metrics_dict = {}
@@ -475,7 +468,6 @@ class OnlineBoutique(gym.Env):
         return flattened_data
 
     # # def get_state(self):
-
 
     #     ob = (
     #         self.deploymentList[ID_recommendation].num_pods,
@@ -546,12 +538,8 @@ class OnlineBoutique(gym.Env):
     #         self.deploymentList[ID_email].transmit_traffic,
     #     )
 
-
     #     pr = get_traffic_between_services()
     #     graph = build_graph(ob,pr)
-        
-
-
 
     #     data = graph_to_data(graph)
 
@@ -719,7 +707,6 @@ class OnlineBoutique(gym.Env):
         return reward
 
     def simulation_update(self):
-
         if self.current_step == 1:
             # Get a random sample!
             sample = self.df.sample()
@@ -774,7 +761,6 @@ class OnlineBoutique(gym.Env):
             self.deploymentList[i].latency = float(
                 "{:.3f}".format(sample[DEPLOYMENTS[i] + "_latency"].values[0])
             )
-
 
         for d in self.deploymentList:
             # Update Desired replicas

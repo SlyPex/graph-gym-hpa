@@ -1,5 +1,6 @@
 import csv
 
+
 def save_obs_to_csv(
     file_name,
     timestamp,
