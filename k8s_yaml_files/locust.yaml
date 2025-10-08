@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust-standalone
+  namespace: onlineboutique
+  labels:
+    app: locust-standalone
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: locust-standalone
+  template:
+    metadata:
+      labels:
+        app: locust-standalone
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9646'
+        prometheus.io/path: '/metrics'
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+      containers:
+        - name: locust-main
+          image: slypex/gcp-microservices-demo-loadgen:v2.10.2
+          imagePullPolicy: Always
+          ports:
+          - name: locust-ui
+            containerPort: 8089
+
+        - name: locust-exporter
+          image: containersol/locust_exporter:v0.5.2
+          env:
+            - name: LOCUST_HOST
+              value: "http://localhost:8089"
+          ports:
+          - name: metrics
+            containerPort: 9646
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: locust-ui-nodeport
+  namespace: onlineboutique
+spec:
+  type: NodePort
+  selector:
+    app: locust-standalone
+  ports:
+    - name: http-ui
+      protocol: TCP
+      port: 8089
+      targetPort: 8089
+      nodePort: 30089
