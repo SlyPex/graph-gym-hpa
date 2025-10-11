@@ -1,6 +1,6 @@
 import random
 import logging
-from locust import task, events, constant_throughput, LoadTestShape, TaskSet, HttpUser, constant, between
+from locust import LoadTestShape, TaskSet, HttpUser, between
 
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
@@ -17,39 +17,39 @@ products = [
     'OLJCESPC7Z']
 
 
-def index(l):
-    l.client.get("/")
+def index(L):
+    L.client.get("/")
 
 
-def setCurrency(l):
+def setCurrency(L):
     currencies = ['EUR', 'USD', 'JPY', 'CAD']
-    l.client.post("/setCurrency",
+    L.client.post("/setCurrency",
                   {'currency_code': random.choice(currencies)})
 
 
-def browseProduct(l):
-    l.client.get("/product/" + random.choice(products))
+def browseProduct(L):
+    L.client.get("/product/" + random.choice(products))
 
 
-def viewCart(l):
-    l.client.get("/cart")
+def viewCart(L):
+    L.client.get("/cart")
 
 
-def addToCart(l):
+def addToCart(L):
     product = random.choice(products)
-    l.client.get("/product/" + product)
-    l.client.post("/cart", {
+    L.client.get("/product/" + product)
+    L.client.post("/cart", {
         'product_id': product,
         'quantity': random.choice([1, 2, 3, 4, 5, 10])})
 
     
-def checkout(l):
+def checkout(L):
     # The on_start method has already ensured a session exists.
     # We just need to make sure the cart is not empty.
-    addToCart(l)
+    addToCart(L)
     
     # Proceed with the checkout. The self.client will automatically include the cookie we set.
-    l.client.post("/cart/checkout", {
+    L.client.post("/cart/checkout", {
         'email': 'someone@example.com',
         'street_address': '1600 Amphitheatre Parkway',
         'zip_code': '94043',
@@ -68,7 +68,7 @@ class UserBehavior(TaskSet):
         Manually establishes a session by making a request to the homepage,
         extracting the session cookie, and storing it for future use.
         """
-        logging.info(f"User starting...")
+        logging.info("User starting...")
         # Make the initial request to the homepage to get the session cookie
         with self.client.get("/", catch_response=True) as response:
             if response.status_code == 200 and 'Set-Cookie' in response.headers:
@@ -81,9 +81,9 @@ class UserBehavior(TaskSet):
                 self.client.cookies.set("shop_session-id", session_id)
                 
                 if 'shop-session-id' in self.client.cookies:
-                    logging.info(f"SUCCESS: Manually set session cookie for user.")
+                    logging.info("SUCCESS: Manually set session cookie for user.")
                 else:
-                    logging.error(f"CRITICAL: Failed to manually set cookie even after extraction.")
+                    logging.error("CRITICAL: Failed to manually set cookie even after extraction.")
             else:
                 response.failure("Could not establish a session. No Set-Cookie header received.")
 
