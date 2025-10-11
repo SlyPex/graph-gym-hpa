@@ -27,9 +27,7 @@ from gym_hpa.gnn.gnn import flatten_graph_data
 from gym_hpa.paths import DATASET_DIR
 
 # --- Constants ---
-CSV_PATH_OB = os.path.join(
-    DATASET_DIR, "online_boutique_gym_observation.csv"
-)
+CSV_PATH_OB = os.path.join(DATASET_DIR, "online_boutique_gym_observation.csv")
 
 # Replication Limits
 MIN_REPLICATION = 1
