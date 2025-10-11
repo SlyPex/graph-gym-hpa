@@ -28,7 +28,7 @@ from gym_hpa.paths import DATASET_DIR
 
 # --- Constants ---
 CSV_PATH_OB = os.path.join(
-    DATASET_DIR, "onlineboutique", "v1", "online_boutique_gym_observation.csv"
+    DATASET_DIR, "online_boutique_gym_observation.csv"
 )
 
 # Replication Limits
