@@ -66,7 +66,7 @@ def decode_action(action: int) -> str:
 
 # --- Argument Parsing ---
 parser = argparse.ArgumentParser(
-    description="Traing/Test an autoscaling agent for the Online Boutique application"
+    description="Training/Test an autoscaling agent for the Online Boutique application"
 )
 parser.add_argument(
     "--alg",
