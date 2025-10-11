@@ -66,7 +66,7 @@ def decode_action(action: int) -> str:
 
 # --- Argument Parsing ---
 parser = argparse.ArgumentParser(
-    description="Run HPA Reinforcement Learning experiments."
+    description="Traing/Test an autoscaling agent for the Online Boutique application"
 )
 parser.add_argument(
     "--alg",
@@ -76,15 +76,6 @@ parser.add_argument(
 )
 parser.add_argument(
     "--k8s", default=False, action="store_true", help="Enable Kubernetes mode."
-)
-parser.add_argument(
-    "--use_case",
-    choices=["redis", "online_boutique"],
-    default="online_boutique",
-    help="The application environment to use.",
-)
-parser.add_argument(
-    "--goal", default="cost", help="Reward goal identifier for logging purposes."
 )
 parser.add_argument(
     "--training", default=False, action="store_true", help="Run in training mode."
@@ -187,22 +178,20 @@ def get_load_model(alg, load_path, tensorboard_log):
         raise ValueError(f"Unknown algorithm: {alg}")
 
 
-def get_env(use_case, k8s):
-    """Initializes the correct gym environment."""
-    if use_case == "online_boutique":
-        # *** CHANGE: Removed goal_reward as it's no longer a parameter ***
-        return OnlineBoutique(k8s=k8s)
-    else:
-        raise ValueError(f"Invalid use_case: {use_case}")
+def get_env(k8s):
+    """Initializes the Online Boutique gym environment."""
+    return OnlineBoutique(k8s=k8s)
 
 
-def get_tensorboard_log_path(use_case, k8s, goal):
+def get_tensorboard_log_path(k8s):
+    """Generates the path for TensorBoard logs."""
     scenario = "real" if k8s else "simulated"
-    return os.path.join(RESULTS_DIR, use_case, scenario, goal)
+    use_case = "online_boutique"
+    return os.path.join(RESULTS_DIR, use_case, scenario)
 
 
-def get_run_name(alg, env_name, goal, k8s, total_steps):
-    return f"{alg}_env_{env_name}_goal_{goal}_k8s_{k8s}_totalSteps_{total_steps}"
+def get_run_name(alg, env_name, k8s, total_steps):
+    return f"{alg}_env_{env_name}_k8s_{k8s}_totalSteps_{total_steps}"
 
 
 def train_model(model, total_steps, name, checkpoint_callback):
@@ -245,8 +234,6 @@ def run_continuous_scaler(model, env, duration_minutes, interval_seconds):
 
     while time.time() < end_time:
         action, _ = model.predict(obs, deterministic=True)
-
-        # *** CHANGE: Decode action for better logging ***
         action_str = decode_action(action.item())
 
         obs, reward, terminated, truncated, info = env.step(action)
@@ -273,14 +260,14 @@ def main():
     args = parser.parse_args()
     logging.info(f"Starting with config: {vars(args)}")
 
-    env = get_env(args.use_case, args.k8s)
+    env = get_env(args.k8s)
     logging.info(f"Using environment: {env.name}")
 
-    tensorboard_log = get_tensorboard_log_path(args.use_case, args.k8s, args.goal)
+    tensorboard_log = get_tensorboard_log_path(args.k8s)
     os.makedirs(tensorboard_log, exist_ok=True)
     logging.info(f"TensorBoard logs at: {tensorboard_log}")
 
-    run_name = get_run_name(args.alg, env.name, args.goal, args.k8s, args.total_steps)
+    run_name = get_run_name(args.alg, env.name, args.k8s, args.total_steps)
     logging.info(f"Run name: {run_name}")
 
     policy_kwargs = get_policy_kwargs()
@@ -307,7 +294,7 @@ def main():
     if args.testing:
         logging.info(f"Testing model from: {args.test_path}")
         # Create a fresh environment for testing
-        test_env = get_env(args.use_case, args.k8s)
+        test_env = get_env(args.k8s)
         model = get_load_model(args.alg, args.test_path, tensorboard_log)
         model.set_env(test_env)
 
