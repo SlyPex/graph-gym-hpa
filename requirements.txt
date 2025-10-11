@@ -59,7 +59,7 @@ sb3-contrib==2.6.0
 six==1.17.0
 stable-baselines3==2.6.0
 sympy==1.14.0
-torch==2.7.1
+torch==2.8.0
 torch-geometric==2.6.1
 tqdm==4.67.1
 triton==3.3.1
