@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import time
+from typing import Any, Dict
 
 # Libraries
 import numpy as np
@@ -11,19 +12,15 @@ import torch
 from stable_baselines3 import A2C, PPO
 from stable_baselines3.common.callbacks import CheckpointCallback
 from sb3_contrib import RecurrentPPO
-from typing import Dict, Any
 
 # Local
 from gym_hpa.gnn.gnn import AdvancedGNNExtractor
-from gym_hpa.paths import RESULTS_DIR
+from gym_hpa.paths import RESULTS_DIR, RUNS_DIR, TENSORBOARD_DIR
 from gym_hpa.rl_environments.online_boutique import OnlineBoutique
 
 # Logging Configuration
 logging.basicConfig(
-    handlers=[
-        logging.FileHandler("run.log", mode="w"),
-        logging.StreamHandler(),  # Also print to console
-    ],
+    handlers=[logging.StreamHandler()],
     level=logging.INFO,
     format="%(asctime)s %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S %p",
@@ -87,10 +84,14 @@ parser.add_argument(
     "--loading", default=False, action="store_true", help="Load a pre-trained model."
 )
 parser.add_argument(
-    "--load_path", default="logs/model/test.zip", help="Path to the model to load."
+    "--load_path",
+    default=os.path.join(RUNS_DIR, "latest", "models", "model.zip"),
+    help="Path to the model to load.",
 )
 parser.add_argument(
-    "--test_path", default="logs/model/test.zip", help="Path to the model to test."
+    "--test_path",
+    default=os.path.join(RUNS_DIR, "latest", "models", "model.zip"),
+    help="Path to the model to test.",
 )
 parser.add_argument(
     "--steps", type=int, default=500, help="Frequency of saving model checkpoints."
@@ -183,25 +184,53 @@ def get_env(k8s):
     return OnlineBoutique(k8s=k8s)
 
 
-def get_tensorboard_log_path(k8s):
-    """Generates the path for TensorBoard logs."""
-    scenario = "real" if k8s else "simulated"
-    use_case = "online_boutique"
-    return os.path.join(RESULTS_DIR, use_case, scenario)
+def get_tensorboard_log_path(_k8s: bool) -> str:
+    """Ensures the shared TensorBoard directory exists and returns it."""
+    os.makedirs(TENSORBOARD_DIR, exist_ok=True)
+    return TENSORBOARD_DIR
 
 
 def get_run_name(alg, env_name, k8s, total_steps):
     return f"{alg}_env_{env_name}_k8s_{k8s}_totalSteps_{total_steps}"
 
 
-def train_model(model, total_steps, name, checkpoint_callback):
+def prepare_run_directories(run_name: str) -> Dict[str, str]:
+    os.makedirs(RUNS_DIR, exist_ok=True)
+    run_dir = os.path.join(RUNS_DIR, run_name)
+    models_dir = os.path.join(run_dir, "models")
+    os.makedirs(run_dir, exist_ok=True)
+    os.makedirs(models_dir, exist_ok=True)
+    return {
+        "run_dir": run_dir,
+        "models_dir": models_dir,
+        "csv_path": os.path.join(run_dir, "results.csv"),
+        "log_path": os.path.join(run_dir, "run.log"),
+    }
+
+
+def configure_file_logging(log_path: str) -> None:
+    root_logger = logging.getLogger()
+
+    # Avoid duplicating file handlers pointing to the same file
+    for handler in root_logger.handlers:
+        if isinstance(handler, logging.FileHandler) and handler.baseFilename == log_path:
+            return
+
+    file_handler = logging.FileHandler(log_path, mode="w")
+    file_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s %(message)s", "%m/%d/%Y %I:%M:%S %p")
+    file_handler.setFormatter(formatter)
+    root_logger.addHandler(file_handler)
+
+
+def train_model(model, total_steps, name, checkpoint_callback, models_dir):
     model.learn(
         total_timesteps=total_steps,
         tb_log_name=name + "_run",
         callback=checkpoint_callback,
         progress_bar=True,
     )
-    model.save(name)
+    model.save(os.path.join(models_dir, name))
 
 
 def get_model_or_load(alg, env, tensorboard_log, loading, load_path, policy_kwargs):
@@ -264,11 +293,18 @@ def main():
     logging.info(f"Using environment: {env.name}")
 
     tensorboard_log = get_tensorboard_log_path(args.k8s)
-    os.makedirs(tensorboard_log, exist_ok=True)
-    logging.info(f"TensorBoard logs at: {tensorboard_log}")
+    logging.info(f"TensorBoard root: {tensorboard_log}")
 
     run_name = get_run_name(args.alg, env.name, args.k8s, args.total_steps)
+    run_paths = prepare_run_directories(run_name)
+    configure_file_logging(run_paths["log_path"])
+
     logging.info(f"Run name: {run_name}")
+    logging.info(f"Run directory: {run_paths['run_dir']}")
+    logging.info(f"Model checkpoints directory: {run_paths['models_dir']}")
+    logging.info(f"Episode summaries CSV: {run_paths['csv_path']}")
+
+    env.file_results = run_paths["csv_path"]
 
     policy_kwargs = get_policy_kwargs()
 
@@ -285,16 +321,23 @@ def main():
         logging.info(f"Training started for {args.total_steps} steps")
         checkpoint_callback = CheckpointCallback(
             save_freq=args.steps,
-            save_path=os.path.join("logs", run_name),
+            save_path=run_paths["models_dir"],
             name_prefix=run_name,
         )
-        train_model(model, args.total_steps, run_name, checkpoint_callback)
+        train_model(
+            model,
+            args.total_steps,
+            run_name,
+            checkpoint_callback,
+            run_paths["models_dir"],
+        )
         logging.info("Training completed.")
 
     if args.testing:
         logging.info(f"Testing model from: {args.test_path}")
         # Create a fresh environment for testing
         test_env = get_env(args.k8s)
+        test_env.file_results = run_paths["csv_path"]
         model = get_load_model(args.alg, args.test_path, tensorboard_log)
         model.set_env(test_env)
 
