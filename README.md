@@ -72,18 +72,18 @@ Current autoscalers (e.g., the Kubernetes HPA) are mostly reactive and do not ac
 ```
 - `datasets` : A directory contains the dataset which is used to train the agent in simulation mode.
 - `k8s_config_files` : A configuration files directory in order to properly deploy the cluster stack.
-- `requirements.txt` : A file which holds the requiered packages in order to run this project.
+- `requirements.txt` : A file which holds the required packages in order to run this project.
 - `setup.py` : A Python script used to describe a package (metadata, dependencies, packaging instructions) in our case, the local package ![gym-hpa](./src/gym-hpa/).
 - `src` : Holds the whole codebase of the developed framework.
 
   - `gym-hpa`:
     - `gnn`: the ![graphCreation](./src/gym-hpa/gnn/graphCreation.py) and the ![gnn](./src/gym-hpa/gnn/gnn.py) code is under this directory.
-    - `rl_environments`: Holds the logic of handling the ![OnlineBoutique](./src/gym-hpa/rl_environments/online_boutique.py) app and it's interaction with the K8s cluster.
+    - `rl_environments`: Holds the logic of handling the ![OnlineBoutique](./src/gym-hpa/rl_environments/online_boutique.py) app and its interaction with the K8s cluster.
 
   - `policies/run` : The main start point of this project to start a training/testing of an agent.
 
 ## Usage 🚀
-All the upcoming steps needs files from this repository so first of all clone the project:
+The following steps require files from this repository. First, clone the project:
   - ```bash
     git clone https://github.com/SlyPex/graph-gym-hpa.git
     ```
@@ -101,13 +101,13 @@ Our cluster consists of the following VMs (Nodes):
 1. Start by installing ![istio](https://istio.io) using `istioctl` command line tool, follow the steps at ![Installation steps using istioctl](https://istio.io/latest/docs/setup/install/istioctl/)
 2. Deploy prometheus using the file ![prometheus.yaml](./k8s_config_files/prometheus.yaml)
 - ```bash
-  kubectl apply k8s_config_files/prometheus.yaml
+  kubectl apply -f k8s_config_files/prometheus.yaml
   ```
 > [!NOTE]
 > This ![prometheus.yaml](./k8s_config_files/prometheus.yaml) file should work out-of-the-box with istio, because it's the same file from the addons provided by istio project with some minor changes :
 > 
-> - Number of replicas is set to 2 to assure high availablity
-> - Added a prometheus service of type NodePort to ensure the continuous connectivitiy with prometheus API.
+> - Number of replicas is set to 2 to assure high availabilty
+> - Added a prometheus service of type NodePort to ensure the continuous connectivity with prometheus API.
 > - Changed Prometheus to scrape and aggregate metrics at the service level instead of the pod level to reduce scrape target cardinality and lower RAM usage. (RAM usage plateaus around 3.7 GB and stabilizes at about 1.8 GB)
 3. Deploy the benchmark application Online Boutique:
 - Create a new namespace named `onlineboutique`
@@ -118,7 +118,7 @@ Our cluster consists of the following VMs (Nodes):
   - ```bash
     kubectl label namespace onlineboutique istio-injection=enabled
     ``` 
-- Last, deploy the application using the file ![onlineboutique.yaml](./k8s_config_files/onlineboutique.yaml)
+- Finally, deploy the application using the file ![onlineboutique.yaml](./k8s_config_files/onlineboutique.yaml)
   - ```bash
     kubectl apply -n onlineboutique -f k8s_config_files/onlineboutique.yaml
     ```
@@ -130,11 +130,11 @@ Our cluster consists of the following VMs (Nodes):
   > Locust pod runs two containers, Locust v2.10.2 and a locust-exporter that exposes metrics to (such as latency, avg response time) Prometheus ,
   > The exporter requires Locust v2.10.2, which is why we use that version
   > <br/>
-  > Locust load generatio in the ![locustfile.py](./k8s_config_files/locust_files/locustfile.py) file which is also packed within a docker image using the ![Dockerfile](./k8s_config_files/locust_files/Dockerfile),
-  > In case of any changes needed you can adjust these files to your need and use  your custom docker image by setting this ![line](./k8s_config_files/locust_files/locust.yaml#L36C1-L36C63) to your `<registry/tag:version>`.
+  > Locust load generation is implemented in the ![locustfile.py](./k8s_config_files/locust_files/locustfile.py) file which is also packed within a docker image using the ![Dockerfile](./k8s_config_files/locust_files/Dockerfile),
+  > In case of any changes needed you can adjust these files to your need and use your custom docker image by setting this ![line](./k8s_config_files/locust_files/locust.yaml#L36C1-L36C63) with your built image, e.g. `ghcr.io/<org>/locust:vX.Y.Z`.
 
 > [!CAUTION]
-> All the yaml files used to deploy the previous stack have a `nodeAffinity` that prevents their deployments from being scheduled on the control-plane node (Masternode VM), This may cause some issue with your case so double check that.
+> All the yaml files used to deploy the previous stack have a `nodeAffinity` that prevents their deployments from being scheduled on the control-plane node (masternode VM), This may cause issues in some setups; please double-check that the nodeAffinity meets your cluster topology.
 
 ### Agent Setup & Training 🧠
 
@@ -146,7 +146,7 @@ Our cluster consists of the following VMs (Nodes):
   - ```
     pip install -r requirements.txt
     ```
-3. Install the gym-hpa package using
+3. Install the `gym_hpa` package using
   - ```
     pip install -e .
     ```
@@ -160,7 +160,7 @@ Our cluster consists of the following VMs (Nodes):
     ```
     
 > [!TIP]
-> Use the `-h | --help` to list all the availble options and their possbile values.
+> Run `python run.py -h` (or `--help`) to list all the available options and their possible values.
 
 ## Collaborators 🤝
 

@@ -1,0 +1,10 @@
+gymnasium
+numpy
+pandas
+torch
+stable-baselines3
+sb3-contrib
+torch-geometric
+kubernetes
+requests
+matplotlib
