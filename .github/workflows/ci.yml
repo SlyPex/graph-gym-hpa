@@ -27,37 +27,21 @@ jobs:
     needs: branch
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.branch.outputs.branch_name }}
           fetch-depth: 1
-
-      - name: Set up Git config
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
       - name: Install Ruff
         uses: astral-sh/ruff-action@v3
         with:
           args: "--version"
         
-      - name: Ruff Formatter
-        run: ruff format
+      - name: Ruff Formatter Check
+        run: ruff format --check
 
-      - name: Ruff Linter
-        run: ruff check --fix
-
-      - name: Commit and push changes
-        if: success() || failure()
-        run: |
-          git add .
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: lint/format code via CI"
-            git push origin ${{ needs.branch.outputs.branch_name }}
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Ruff Linter Check
+        run: ruff check
     
