@@ -72,9 +72,6 @@ parser.add_argument(
     help="The algorithm to use.",
 )
 parser.add_argument(
-    "--k8s", default=False, action="store_true", help="Enable Kubernetes mode."
-)
-parser.add_argument(
     "--training", default=False, action="store_true", help="Run in training mode."
 )
 parser.add_argument(
@@ -179,19 +176,19 @@ def get_load_model(alg, load_path, tensorboard_log):
         raise ValueError(f"Unknown algorithm: {alg}")
 
 
-def get_env(k8s):
+def get_env():
     """Initializes the Online Boutique gym environment."""
-    return OnlineBoutique(k8s=k8s)
+    return OnlineBoutique()
 
 
-def get_tensorboard_log_path(_k8s: bool) -> str:
+def get_tensorboard_log_path() -> str:
     """Ensures the shared TensorBoard directory exists and returns it."""
     os.makedirs(TENSORBOARD_DIR, exist_ok=True)
     return TENSORBOARD_DIR
 
 
-def get_run_name(alg, env_name, k8s, total_steps):
-    return f"{alg}_env_{env_name}_k8s_{k8s}_totalSteps_{total_steps}"
+def get_run_name(alg, env_name, total_steps):
+    return f"{alg}_env_{env_name}_totalSteps_{total_steps}"
 
 
 def prepare_run_directories(run_name: str) -> Dict[str, str]:
@@ -285,65 +282,70 @@ def run_continuous_scaler(model, env, duration_minutes, interval_seconds):
 
 
 def main():
-    set_seed(42)
-    args = parser.parse_args()
-    logging.info(f"Starting with config: {vars(args)}")
+    try:
+        set_seed(42)
+        args = parser.parse_args()
+        logging.info(f"Starting with config: {vars(args)}")
 
-    env = get_env(args.k8s)
-    logging.info(f"Using environment: {env.name}")
+        env = get_env()
+        logging.info(f"Using environment: {env.name}")
 
-    tensorboard_log = get_tensorboard_log_path(args.k8s)
-    logging.info(f"TensorBoard root: {tensorboard_log}")
+        tensorboard_log = get_tensorboard_log_path()
+        logging.info(f"TensorBoard root: {tensorboard_log}")
 
-    run_name = get_run_name(args.alg, env.name, args.k8s, args.total_steps)
-    run_paths = prepare_run_directories(run_name)
-    configure_file_logging(run_paths["log_path"])
+        run_name = get_run_name(args.alg, env.name, args.total_steps)
+        run_paths = prepare_run_directories(run_name)
+        configure_file_logging(run_paths["log_path"])
 
-    logging.info(f"Run name: {run_name}")
-    logging.info(f"Run directory: {run_paths['run_dir']}")
-    logging.info(f"Model checkpoints directory: {run_paths['models_dir']}")
-    logging.info(f"Episode summaries CSV: {run_paths['csv_path']}")
+        logging.info(f"Run name: {run_name}")
+        logging.info(f"Run directory: {run_paths['run_dir']}")
+        logging.info(f"Model checkpoints directory: {run_paths['models_dir']}")
+        logging.info(f"Episode summaries CSV: {run_paths['csv_path']}")
 
-    env.file_results = run_paths["csv_path"]
+        env.file_results = run_paths["csv_path"]
 
-    policy_kwargs = get_policy_kwargs()
+        policy_kwargs = get_policy_kwargs()
 
-    if args.loading:
-        logging.info(f"Loading model from: {args.load_path}")
-    else:
-        logging.info(f"Creating new model: {args.alg}")
+        if args.loading:
+            logging.info(f"Loading model from: {args.load_path}")
+        else:
+            logging.info(f"Creating new model: {args.alg}")
 
-    model = get_model_or_load(
-        args.alg, env, tensorboard_log, args.loading, args.load_path, policy_kwargs
-    )
-
-    if args.training:
-        logging.info(f"Training started for {args.total_steps} steps")
-        checkpoint_callback = CheckpointCallback(
-            save_freq=args.steps,
-            save_path=run_paths["models_dir"],
-            name_prefix=run_name,
+        model = get_model_or_load(
+            args.alg, env, tensorboard_log, args.loading, args.load_path, policy_kwargs
         )
-        train_model(
-            model,
-            args.total_steps,
-            run_name,
-            checkpoint_callback,
-            run_paths["models_dir"],
-        )
-        logging.info("Training completed.")
 
-    if args.testing:
-        logging.info(f"Testing model from: {args.test_path}")
-        # Create a fresh environment for testing
-        test_env = get_env(args.k8s)
-        test_env.file_results = run_paths["csv_path"]
-        model = get_load_model(args.alg, args.test_path, tensorboard_log)
-        model.set_env(test_env)
+        if args.training:
+            logging.info(f"Training started for {args.total_steps} steps")
+            checkpoint_callback = CheckpointCallback(
+                save_freq=args.steps,
+                save_path=run_paths["models_dir"],
+                name_prefix=run_name,
+            )
+            train_model(
+                model,
+                args.total_steps,
+                run_name,
+                checkpoint_callback,
+                run_paths["models_dir"],
+            )
+            logging.info("Training completed.")
 
-        run_continuous_scaler(
-            model, test_env, args.scaler_duration, args.scaler_interval
-        )
+        if args.testing:
+            logging.info(f"Testing model from: {args.test_path}")
+            # Create a fresh environment for testing
+            test_env = get_env()
+            test_env.file_results = run_paths["csv_path"]
+            model = get_load_model(args.alg, args.test_path, tensorboard_log)
+            model.set_env(test_env)
+
+            run_continuous_scaler(
+                model, test_env, args.scaler_duration, args.scaler_interval
+            )
+
+    except KeyboardInterrupt:
+        logging.info("\n=== Exiting gracefully, CTRL+C (SIGINT) received ===")
+        return 0
 
 
 if __name__ == "__main__":
