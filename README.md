@@ -4,9 +4,10 @@
   <a href="https://github.com/SlyPex/graph-gym-hpa/actions"><img src="https://img.shields.io/github/actions/workflow/status/SlyPex/graph-gym-hpa/ci.yml?event=pull_request&style=plastic&logo=github&logoSize=auto&label=Continuous%20Integration&labelColor=181717" alt="Status Checks"/></a>
   <a href="https://github.com/SlyPex/graph-gym-hpa/commits/"><img src="https://img.shields.io/github/commit-activity/t/SlyPex/graph-gym-hpa?style=plastic&logo=github&logoSize=auto&labelColor=181717&color=white" alt="GitHub commit activity"/></a>
   <a href="https://github.com/SlyPex/graph-gym-hpa/README.md#collaborators"><img src="https://img.shields.io/badge/Collaborators-3-black?style=plastic&logo=github&labelColor=181717&color=white" alt="Collaborators"/></a>
+  <a href="./LICENSE.md"><img src="https://img.shields.io/badge/License-Academic_Research-blue?style=plastic&labelColor=181717&color=white" alt="License"/></a>
   <br/>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-v3.11.13-yellow?style=plastic&logo=python&logoColor=white&logoSize=auto&labelColor=3776AB&color=ffd94a"/></a>
-  <a href="https://kubernetes.io/"><img src="https://img.shields.io/badge/Kubernetes-v1.33.3-grey?style=plastic&logo=kubernetes&labelColor=white&color=%23326CE5"/></a>
+  <a href="https://kubernetes.io/"><img src="https://img.shields.io/badge/Kubernetes-v1.30+-grey?style=plastic&logo=kubernetes&labelColor=white&color=%23326CE5"/></a>
   <a href="https://locust.io/"><img src="https://img.shields.io/badge/Locust-v2.10.2-blue?style=plastic&logo=locust&labelColor=white&color=b8ee4b"/></a>
   <br/>
   <a href="https://prometheus.io/"><img src="https://img.shields.io/badge/Prometheus-white?style=plastic&logo=prometheus&logoSize=auto&labelColor=white&color=E6522C"/></a>
@@ -22,9 +23,22 @@ Current autoscalers (e.g., the Kubernetes HPA) are mostly reactive and do not ac
 - Reinforcement Learning: allows an agent to learn by interacting with a real-world environment, mainly a Kubernetes cluster.
 - Graph Neural Networks: because microservices and their call relationships form a graph, GNNs are well suited to model and learn inter-service dependencies.
 
+
+### Prerequisites 📋
+
+Before starting, ensure you have:
+
+- Active Kubernetes cluster with (v.1.30+)
+- Python Installed with (v.3.11+)
+- Storage Requirements:
+
+  - **~7GB** for python packages and dependencies
+  - **~25MB per model checkpoint** (Checkpoints saved every N steps)
+  - **Minimum of 15GB free disk space** recommended
+
 ### Cluster Stack 🏗️
 <div align="center">
-    <img width="736" height="481" alt="training_loop" src="https://github.com/user-attachments/assets/669c303a-cb14-446f-bc03-214176d21e9e" />
+    <img style="max-width: 100%; height: auto; display: block;" alt="training_loop" src="./assets/training_loop.png"/>
     <p>Figure: Shows the training loop of the agent and its interaction with the environment</p>
 </div>
 
@@ -43,8 +57,6 @@ Current autoscalers (e.g., the Kubernetes HPA) are mostly reactive and do not ac
 
 ### Project Files 📂
 ```
-├── datasets
-│   └── online_boutique_gym_observation.csv
 ├── k8s_config_files
 │   ├── locust_files
 │   │   ├── Dockerfile
@@ -52,6 +64,14 @@ Current autoscalers (e.g., the Kubernetes HPA) are mostly reactive and do not ac
 │   │   └── locust.yaml
 │   ├── onlineboutique.yaml
 │   └── prometheus.yaml
+├── results
+│   ├── runs/
+│   │   └── <run_name>/
+│   │       ├── models/
+│   │       ├── run.log
+│   │       └── results.csv
+│   └── tensorboard/
+├── requirements.in
 ├── requirements.txt
 ├── setup.py
 └── src
@@ -70,9 +90,11 @@ Current autoscalers (e.g., the Kubernetes HPA) are mostly reactive and do not ac
       └── util
             └── util.py
 ```
-- `datasets` : A directory contains the dataset which is used to train the agent in simulation mode.
+
 - `k8s_config_files` : A configuration files directory in order to properly deploy the cluster stack.
-- `requirements.txt` : A file which holds the required packages in order to run this project.
+- `results` : A directory where the outputs of a training are saved (eg: Training Logs, Episode Metrics).
+- `requirements.in` : File hold the explicitly imported python modules.
+- `requirements.txt` : A generated file from `pip-compile` command provided by the `pip-tools` package, which contains the required modules in order to run this project.
 - `setup.py` : A Python script used to describe a package (metadata, dependencies, packaging instructions) in our case, the local package ![gym-hpa](./src/gym-hpa/).
 - `src` : Holds the whole codebase of the developed framework.
 
@@ -83,9 +105,12 @@ Current autoscalers (e.g., the Kubernetes HPA) are mostly reactive and do not ac
   - `policies/run` : The main start point of this project to start a training/testing of an agent.
 
 ## Usage 🚀
-The following steps require files from this repository. First, clone the project:
+The following steps require files from this repository. First, clone the project and access the directory:
   - ```bash
     git clone https://github.com/SlyPex/graph-gym-hpa.git
+    ```
+  - ```bash
+    cd graph-gym-hpa/
     ```
 
 ### Cluster Setup 🛠️
@@ -138,29 +163,63 @@ Our cluster consists of the following VMs (Nodes):
 
 ### Agent Setup & Training 🧠
 
-1. Go to the directory where you cloned the project
+> [!IMPORTANT]
+> **Before Training - Critical Setup:**
+> 1. **Kubernetes API Access**: Ensure the Kubernetes API is accessible from your training machine
+>    - Set up kubectl proxy if needed: `kubectl proxy --port=8080`
+>    - Update `HOST` in [`deployment.py`](./src/gym_hpa/rl_environments/deployment.py#L12) if using a different endpoint
+>    - See [Kubernetes API Access Guide](https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-api/)
+> 
+> 2. **Prometheus Accessibility**: Verify Prometheus is reachable at `localhost:31090`
+>    ```bash
+>    kubectl get svc -n istio-system prometheus
+>    curl http://localhost:31090/-/healthy
+>    ```
+>    - If you modified the NodePort in [`prometheus.yaml`](./k8s_config_files/prometheus.yaml), update `PROMETHEUS_URL` in:
+>      - [`util.py`](./src/gym_hpa/rl_environments/util.py#L7)
+>      - [`graphCreation.py`](./src/gym_hpa/gnn/graphCreation.py#L54)
+
+1. Install the required packages listed under the file ![requirements.txt](./requirements.txt)  and the local package ![gym-hpa](./src/gym_hpa/) in order to run the framework
   - ```
-    cd path/to/project
+    pip install -r requirements.txt && pip install -e .
     ```
-2. Install the required packages listed under the file ![requirements.txt](./requirements.txt) in order to run the framework
-  - ```
-    pip install -r requirements.txt
-    ```
-3. Install the `gym_hpa` package using
-  - ```
-    pip install -e .
-    ```
-4. Change the directory to where the `run.py` script is:
+2. Change the directory to where the `run.py` script is:
   - ```
     cd src/policies/run
     ```
-5. Finally, launch a training
+3. Finally, launch a training
   - ```
-    python run.py --k8s --training --total_steps 1000 --alg a2c
+    python run.py --training --total_steps 1000 --alg a2c
     ```
     
 > [!TIP]
-> Run `python run.py -h` (or `--help`) to list all the available options and their possible values.
+> **Available Options:** Run `python run.py -h` (or `--help`) to list all the available options and their possible values.
+> 
+> **Monitor Resources:** Keep an eye on CPU and RAM usage to avoid OOM (Out of Memory) errors:
+> ```bash
+> # Monitor node resources
+> kubectl top nodes
+> 
+> # Monitor pods sorted by memory (all namespaces)
+> kubectl top pods -A --sort-by=memory
+> 
+> # Monitor pods sorted by CPU (all namespaces)
+> kubectl top pods -A --sort-by=cpu
+> 
+> # Watch resources in real-time
+> watch -n 2 'kubectl top nodes && echo && kubectl top pods -A --sort-by=memory'
+> ```
+
+## License 📄
+This project is a derivative work of [Gym-HPA](https://github.com/jpedro1992/gym-hpa) and is licensed for 
+**non-commercial educational and research use only**. 
+
+See [LICENSE.md](./LICENSE.md) for complete terms.
+
+For commercial use, contact:
+- Original work: Ghent University & IMEC (info@imec.be)
+- This fork: (s.meharzi@esi-sba.dz)
+
 
 ## Collaborators 🤝
 
