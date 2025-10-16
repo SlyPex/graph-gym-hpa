@@ -15,7 +15,7 @@ from sb3_contrib import RecurrentPPO
 
 # Local
 from gym_hpa.gnn.gnn import AdvancedGNNExtractor
-from gym_hpa.paths import RESULTS_DIR, RUNS_DIR, TENSORBOARD_DIR
+from gym_hpa.paths import RUNS_DIR, TENSORBOARD_DIR
 from gym_hpa.rl_environments.online_boutique import OnlineBoutique
 
 # Logging Configuration
@@ -210,7 +210,10 @@ def configure_file_logging(log_path: str) -> None:
 
     # Avoid duplicating file handlers pointing to the same file
     for handler in root_logger.handlers:
-        if isinstance(handler, logging.FileHandler) and handler.baseFilename == log_path:
+        if (
+            isinstance(handler, logging.FileHandler)
+            and handler.baseFilename == log_path
+        ):
             return
 
     file_handler = logging.FileHandler(log_path, mode="w")
