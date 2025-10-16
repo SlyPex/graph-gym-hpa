@@ -28,8 +28,8 @@ Current autoscalers (e.g., the Kubernetes HPA) are mostly reactive and do not ac
 
 Before starting, ensure you have:
 
-- Active Kubernetes cluster with (v.1.30+)
-- Python Installed with (v.3.11+)
+- Active Kubernetes cluster **(v1.30+)**
+- Python installed **(v3.11+)**
 - Storage Requirements:
 
   - **~7GB** for python packages and dependencies
@@ -71,7 +71,6 @@ Before starting, ensure you have:
 │   │       ├── run.log
 │   │       └── results.csv
 │   └── tensorboard/
-├── requirements.in
 ├── requirements.txt
 ├── setup.py
 └── src
@@ -91,16 +90,15 @@ Before starting, ensure you have:
             └── util.py
 ```
 
-- `k8s_config_files` : A configuration files directory in order to properly deploy the cluster stack.
-- `results` : A directory where the outputs of a training are saved (eg: Training Logs, Episode Metrics).
-- `requirements.in` : File hold the explicitly imported python modules.
-- `requirements.txt` : A generated file from `pip-compile` command provided by the `pip-tools` package, which contains the required modules in order to run this project.
-- `setup.py` : A Python script used to describe a package (metadata, dependencies, packaging instructions) in our case, the local package ![gym-hpa](./src/gym-hpa/).
-- `src` : Holds the whole codebase of the developed framework.
+- `k8s_config_files`: A configuration files directory in order to properly deploy the cluster stack.
+- `results`: A directory where the outputs of a training are saved (eg: Training Logs, Episode Metrics).
+- `requirements.txt`: A generated file from `pip-compile` command provided by the `pip-tools` package, which contains the required modules in order to run this project.
+- `setup.py`: A Python script used to describe a package (metadata, dependencies, packaging instructions) in our case, the local package ![gym-hpa](./src/gym_hpa/).
+- `src`: Holds the whole codebase of the developed framework.
 
-  - `gym-hpa`:
-    - `gnn`: the ![graphCreation](./src/gym-hpa/gnn/graphCreation.py) and the ![gnn](./src/gym-hpa/gnn/gnn.py) code is under this directory.
-    - `rl_environments`: Holds the logic of handling the ![OnlineBoutique](./src/gym-hpa/rl_environments/online_boutique.py) app and its interaction with the K8s cluster.
+  - `gym_hpa`:
+    - `gnn`: the ![graphCreation](./src/gym_hpa/gnn/graphCreation.py) and the ![gnn](./src/gym_hpa/gnn/gnn.py) code is under this directory.
+    - `rl_environments`: Holds the logic of handling the ![OnlineBoutique](./src/gym_hpa/rl_environments/online_boutique.py) app and its interaction with the K8s cluster.
 
   - `policies/run` : The main start point of this project to start a training/testing of an agent.
 
@@ -131,7 +129,7 @@ Our cluster consists of the following VMs (Nodes):
 > [!NOTE]
 > This ![prometheus.yaml](./k8s_config_files/prometheus.yaml) file should work out-of-the-box with istio, because it's the same file from the addons provided by istio project with some minor changes :
 > 
-> - Number of replicas is set to 2 to assure high availabilty
+> - Number of replicas is set to 2 to assure high availability
 > - Added a prometheus service of type NodePort to ensure the continuous connectivity with prometheus API.
 > - Changed Prometheus to scrape and aggregate metrics at the service level instead of the pod level to reduce scrape target cardinality and lower RAM usage. (RAM usage plateaus around 3.7 GB and stabilizes at about 1.8 GB)
 3. Deploy the benchmark application Online Boutique:
