@@ -1,6 +1,6 @@
 # License
 
-This project is a derivative work based on [Gym-HPA](https://github.com/original-repo-link) 
+This project is a derivative work based on [Gym-HPA](https://github.com/jpedro1992/gym-hpa) 
 and includes substantial modifications and additions.
 
 ## Original Work License
