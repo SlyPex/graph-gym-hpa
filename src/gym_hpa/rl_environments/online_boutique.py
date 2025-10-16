@@ -1,10 +1,8 @@
 import logging
 import time
 from statistics import mean
-import os
 import gymnasium as gym
 import numpy as np
-import pandas as pd
 from gymnasium import spaces
 from gymnasium.utils import seeding
 from gymnasium.spaces import Box
@@ -24,11 +22,8 @@ from gym_hpa.gnn.graphCreation import (
     graph_to_data,
 )
 from gym_hpa.gnn.gnn import flatten_graph_data
-from gym_hpa.paths import DATASET_DIR
 
 # --- Constants ---
-CSV_PATH_OB = os.path.join(DATASET_DIR, "online_boutique_gym_observation.csv")
-
 # Replication Limits
 MIN_REPLICATION = 1
 MAX_REPLICATION = 4  # Adjusted to align with a system-wide max of 44 pods
@@ -60,18 +55,15 @@ class OnlineBoutique(gym.Env):
 
     metadata = {"render.modes": ["human", "ansi", "array"]}
 
-    def __init__(self, k8s=False, waiting_period=0.3):
+    def __init__(self, waiting_period=0.3):
         super(OnlineBoutique, self).__init__()
 
-        self.k8s = k8s
         self.name = "online_boutique_gym"
         self.__version__ = "0.0.1"
         self.seed()
         self.waiting_period = waiting_period
 
-        logging.info(
-            f"[Init] Env: {self.name} | K8s: {self.k8s} | Version {self.__version__}"
-        )
+        logging.info(f"[Init] Env: {self.name} | Version {self.__version__}")
 
         self.current_step = 0
 
@@ -85,7 +77,7 @@ class OnlineBoutique(gym.Env):
         )
 
         self.deploymentList = get_online_boutique_deployment_list(
-            self.k8s, MIN_REPLICATION, MAX_REPLICATION
+            MIN_REPLICATION, MAX_REPLICATION
         )
         for d in self.deploymentList:
             d.print_deployment()
@@ -108,13 +100,8 @@ class OnlineBoutique(gym.Env):
         self.episode_count = 0
         self.file_results = "results.csv"
 
-        if not self.k8s:
-            self.df = pd.read_csv(CSV_PATH_OB)
-
     def step(self, action):
         if self.current_step == 1:
-            if not self.k8s:
-                self.simulation_update()
             self.time_start = time.time()
 
         # Decode the discrete action into (deployment_id, scaling_value)
@@ -136,21 +123,17 @@ class OnlineBoutique(gym.Env):
 
         self.take_action(deployment_id, scaling_value)
 
-        # Wait for changes to apply in a real cluster
+        # Wait for changes to apply in the cluster
         if (
-            self.k8s
-            and action != ACTION_DO_NOTHING
+            action != ACTION_DO_NOTHING
             and not self.constraint_min_pod_replicas
             and not self.constraint_max_pod_replicas
         ):
             time.sleep(self.waiting_period)
 
-        # Update observations from the environment
-        if self.k8s:
-            for d in self.deploymentList:
-                d.update_obs_k8s()
-        else:
-            self.simulation_update()
+        # Update observations from Kubernetes
+        for d in self.deploymentList:
+            d.update_obs_k8s()
 
         # Get reward and update state
         reward = self.get_reward
@@ -198,7 +181,7 @@ class OnlineBoutique(gym.Env):
         self.constraint_min_pod_replicas = False
 
         self.deploymentList = get_online_boutique_deployment_list(
-            self.k8s, MIN_REPLICATION, MAX_REPLICATION
+            MIN_REPLICATION, MAX_REPLICATION
         )
         self.previous_system_distance = calculate_system_distance(
             self.deploymentList, 0
@@ -255,61 +238,6 @@ class OnlineBoutique(gym.Env):
         data = graph_to_data(graph)
         flattened_data = flatten_graph_data(data)
         return flattened_data
-
-    def simulation_update(self):
-        if self.current_step == 1:
-            sample = self.df.sample()
-            for i, name in enumerate(DEPLOYMENTS):
-                self.deploymentList[i].num_pods = int(
-                    sample[f"{name}_num_pods"].values[0]
-                )
-                self.deploymentList[i].num_previous_pods = int(
-                    sample[f"{name}_num_pods"].values[0]
-                )
-        else:
-            pods = [d.num_pods for d in self.deploymentList]
-            previous_pods = [d.num_previous_pods for d in self.deploymentList]
-            diffs = [p - pp for p, pp in zip(pods, previous_pods)]
-
-            for i, name in enumerate(DEPLOYMENTS):
-                self.df[f"diff-{name}"] = self.df[f"{name}_num_pods"].diff()
-
-            filtered_df = self.df
-            for i, name in enumerate(DEPLOYMENTS):
-                match = filtered_df[
-                    (filtered_df[f"{name}_num_pods"] == pods[i])
-                    & (filtered_df[f"diff-{name}"] == diffs[i])
-                ]
-                if not match.empty:
-                    filtered_df = match
-                else:
-                    fallback_match = filtered_df[
-                        filtered_df[f"{name}_num_pods"] == pods[i]
-                    ]
-                    if not fallback_match.empty:
-                        filtered_df = fallback_match
-
-            sample = filtered_df.sample() if not filtered_df.empty else self.df.sample()
-
-        for i, name in enumerate(DEPLOYMENTS):
-            self.deploymentList[i].cpu_usage = int(
-                sample[f"{name}_cpu_usage"].values[0]
-            )
-            self.deploymentList[i].mem_usage = int(
-                sample[f"{name}_mem_usage"].values[0]
-            )
-            self.deploymentList[i].received_traffic = int(
-                sample[f"{name}_traffic_in"].values[0]
-            )
-            self.deploymentList[i].transmit_traffic = int(
-                sample[f"{name}_traffic_out"].values[0]
-            )
-            self.deploymentList[i].latency = float(
-                f"{sample[f'{name}_latency'].values[0]:.3f}"
-            )
-
-        for d in self.deploymentList:
-            d.update_replicas()
 
     def render(self, mode="human", close=False):
         pass

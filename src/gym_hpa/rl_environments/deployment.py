@@ -22,7 +22,7 @@ MEM_WEIGHT = 0.3
 # --- Helper Functions ---
 
 
-def get_online_boutique_deployment_list(k8s, min_pods, max_pods):
+def get_online_boutique_deployment_list(min_pods, max_pods):
     """Factory function to create a list of DeploymentStatus objects for the Online Boutique app."""
     deployment_configs = [
         ("recommendationservice", 100, 200, 220, 450),
@@ -42,7 +42,6 @@ def get_online_boutique_deployment_list(k8s, min_pods, max_pods):
     for name, cpu_req, cpu_lim, mem_req, mem_lim in deployment_configs:
         deployment_list.append(
             DeploymentStatus(
-                k8s=k8s,
                 name=name,
                 namespace="onlineboutique",
                 container_name=name,
@@ -96,7 +95,6 @@ def parse_memory(mem_str: str) -> float:
 class DeploymentStatus:
     def __init__(
         self,
-        k8s,
         name,
         namespace,
         container_name,
@@ -108,7 +106,6 @@ class DeploymentStatus:
         mem_limit,
         threshold=0.8,
     ):
-        self.k8s = k8s
         self.name = name
         self.namespace = namespace
         self.container_name = container_name
@@ -138,29 +135,25 @@ class DeploymentStatus:
             dtype=np.float32,
         )
 
-        if self.k8s:
-            logging.info(
-                f"[Deployment {self.name}] Connecting to Kubernetes cluster..."
+        logging.info(f"[Deployment {self.name}] Connecting to Kubernetes cluster...")
+        try:
+            k8s_config = client.Configuration()
+            k8s_config.verify_ssl = False
+            k8s_config.api_key = {"authorization": f"Bearer {TOKEN}"}
+            k8s_config.host = HOST
+            api_client = client.ApiClient(k8s_config)
+            self.v1 = client.CoreV1Api(api_client)
+            self.apps_v1 = client.AppsV1Api(api_client)
+            deployment = self.apps_v1.read_namespaced_deployment(
+                name=self.name, namespace=self.namespace
             )
-            try:
-                k8s_config = client.Configuration()
-                k8s_config.verify_ssl = False
-                k8s_config.api_key = {"authorization": f"Bearer {TOKEN}"}
-                k8s_config.host = HOST
-                api_client = client.ApiClient(k8s_config)
-                self.v1 = client.CoreV1Api(api_client)
-                self.apps_v1 = client.AppsV1Api(api_client)
-                deployment = self.apps_v1.read_namespaced_deployment(
-                    name=self.name, namespace=self.namespace
-                )
-                self.num_pods = deployment.spec.replicas
-                self.num_previous_pods = deployment.spec.replicas
-                self.update_obs_k8s()
-            except Exception as e:
-                logging.error(
-                    f"Failed to connect to Kubernetes or find deployment '{self.name}': {e}"
-                )
-                self.k8s = False
+            self.num_pods = deployment.spec.replicas
+            self.num_previous_pods = deployment.spec.replicas
+            self.update_obs_k8s()
+        except Exception as e:
+            logging.error(
+                f"Failed to connect to Kubernetes or find deployment '{self.name}': {e}"
+            )
 
     def update_obs_k8s(self):
         try:
@@ -267,21 +260,13 @@ class DeploymentStatus:
     def deploy_pod_replicas(self, n, env):
         new_replicas = self.num_pods + n
         if new_replicas <= self.max_pods:
-            if self.k8s:
-                self.update_deployment_replicas(new_replicas)
-            else:
-                self.num_previous_pods = self.num_pods
-                self.num_pods = new_replicas
+            self.update_deployment_replicas(new_replicas)
         else:
             env.constraint_max_pod_replicas = True
 
     def terminate_pod_replicas(self, n, env):
         new_replicas = self.num_pods - n
         if new_replicas >= self.min_pods:
-            if self.k8s:
-                self.update_deployment_replicas(new_replicas)
-            else:
-                self.num_previous_pods = self.num_pods
-                self.num_pods = new_replicas
+            self.update_deployment_replicas(new_replicas)
         else:
             env.constraint_min_pod_replicas = True
