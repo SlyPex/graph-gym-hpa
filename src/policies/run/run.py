@@ -148,17 +148,47 @@ def get_model(alg, env, tensorboard_log, policy_kwargs):
             gamma=0.99,
             gae_lambda=0.95,
             clip_range=0.2,
-            ent_coef=0.005,
+            ent_coef=0.01,  # Increased from 0.005 to 0.01 for better exploration
+            vf_coef=0.5,  # Value function coefficient
+            max_grad_norm=0.5,  # Gradient clipping for stability
             learning_rate=3e-4,
             verbose=1,
             tensorboard_log=tensorboard_log,
         )
     elif alg == "recurrent_ppo":
         return RecurrentPPO(
-            "MlpLstmPolicy", env=env, verbose=1, tensorboard_log=tensorboard_log
+            "MlpLstmPolicy",
+            env=env,
+            policy_kwargs=policy_kwargs,
+            n_steps=500,
+            batch_size=64,
+            n_epochs=20,
+            gamma=0.99,
+            gae_lambda=0.95,
+            clip_range=0.2,
+            ent_coef=0.01,  # Entropy coefficient for exploration
+            vf_coef=0.5,  # Value function coefficient
+            learning_rate=3e-4,
+            verbose=1,
+            tensorboard_log=tensorboard_log,
         )
     elif alg == "a2c":
-        return A2C("MlpPolicy", env=env, verbose=1, tensorboard_log=tensorboard_log)
+        return A2C(
+            "MlpPolicy",
+            env=env,
+            policy_kwargs=policy_kwargs,
+            n_steps=5,  # A2C uses fewer steps between updates
+            gamma=0.99,
+            gae_lambda=1.0,  # Monte Carlo advantage estimation for A2C
+            ent_coef=0.01,  # CRITICAL: Entropy coefficient for exploration
+            vf_coef=0.5,  # Value function coefficient
+            max_grad_norm=0.5,  # Gradient clipping
+            learning_rate=7e-4,  # A2C typically uses higher LR than PPO
+            use_rms_prop=True,  # RMSprop optimizer (standard for A2C)
+            normalize_advantage=False,
+            verbose=1,
+            tensorboard_log=tensorboard_log,
+        )
     else:
         raise ValueError(f"Unknown algorithm: {alg}")
 
@@ -216,9 +246,11 @@ def configure_file_logging(log_path: str) -> None:
         ):
             return
 
+    # Capture all log levels including DEBUG, INFO, WARNING, ERROR, CRITICAL
     file_handler = logging.FileHandler(log_path, mode="w")
-    file_handler.setLevel(logging.INFO)
-    formatter = logging.Formatter("%(asctime)s %(message)s", "%m/%d/%Y %I:%M:%S %p")
+    file_handler.setLevel(logging.DEBUG)
+    # Include log level in the format to distinguish INFO from ERROR
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s", "%m/%d/%Y %I:%M:%S %p")
     file_handler.setFormatter(formatter)
     root_logger.addHandler(file_handler)
 
@@ -349,6 +381,10 @@ def main():
     except KeyboardInterrupt:
         logging.info("\n=== Exiting gracefully, CTRL+C (SIGINT) received ===")
         return 0
+    except Exception as e:
+        # Log any uncaught exceptions with full traceback to the file
+        logging.error(f"Uncaught exception: {e}", exc_info=True)
+        raise
 
 
 if __name__ == "__main__":

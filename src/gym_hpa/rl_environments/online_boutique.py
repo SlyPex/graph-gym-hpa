@@ -26,7 +26,7 @@ from gym_hpa.gnn.gnn import flatten_graph_data
 # --- Constants ---
 # Replication Limits
 MIN_REPLICATION = 1
-MAX_REPLICATION = 4  # Adjusted to align with a system-wide max of 44 pods
+MAX_REPLICATION = 8  # Adjusted to align with a system-wide max of 44 pods
 MAX_STEPS = 25
 
 # Action Definitions
@@ -208,7 +208,7 @@ class OnlineBoutique(gym.Env):
     @property
     def get_reward(self):
         if self.constraint_max_pod_replicas or self.constraint_min_pod_replicas:
-            return -1.0
+            return -0.3
 
         current_system_distance = calculate_system_distance(
             self.deploymentList, self.previous_system_distance
